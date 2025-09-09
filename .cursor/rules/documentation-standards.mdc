@@ -1,0 +1,209 @@
+---
+description: Documentation standards for markdown files - Unicode allowed
+
+# Documentation Standards
+
+## Unicode Support ✅
+Markdown documentation **ALLOWS** full Unicode support:
+- ✅ Success indicators, ❌ Error indicators
+- 🚀 Feature highlights, 📝 Documentation notes
+- ⚠️ Warnings, 🔧 Configuration sections
+
+## Structure Requirements
+- Clear project description with IaC context
+- Complete parameter tables with examples
+- Real-world usage scenarios
+- Troubleshooting based on actual issues
+- Performance comparisons and optimization guides
+
+## Content Guidelines
+- Update documentation with every functional change
+- Include actual command outputs and expected results
+- Provide clear troubleshooting steps
+- Use tables for parameter documentation
+- Include links to external resources when relevant
+globs: ["**/*.md", "**/README.md"]
+alwaysApply: false
+---
+
+# Documentation Standards
+
+## Markdown Guidelines
+
+### Unicode and Emoji Support ✅
+Unlike PowerShell files, markdown documentation **ALLOWS** full Unicode support:
+
+```markdown
+✅ **Success indicators** - Use green checkmarks
+❌ **Error indicators** - Use red X marks
+🚀 **Feature highlights** - Use rocket emoji
+📝 **Documentation notes** - Use memo emoji
+⚠️ **Warnings** - Use warning signs
+🔧 **Configuration** - Use wrench emoji
+```
+
+### Structure Requirements
+
+#### README.md Must Include:
+1. **Clear project description** - What this IaC repository does
+2. **Usage examples** - All parameter combinations
+3. **Parameter tables** - Complete with descriptions
+4. **Feature lists** - With emoji for visual appeal
+5. **Troubleshooting section** - Common issues and solutions
+6. **IaC perspective** - Emphasize infrastructure automation
+
+#### Example Structure:
+```markdown
+# Project Title 🚀
+
+Brief description with IaC context
+
+## Features ✨
+- ✅ Feature 1
+- ✅ Feature 2  
+- ✅ Feature 3
+
+## Usage 📝
+### Basic Usage
+\```powershell
+.\Script.ps1
+\```
+
+### Advanced Usage
+\```powershell
+.\Script.ps1 -Parameter1 "Value" -WhatIf
+\```
+
+## Parameters 🔧
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `Param1` | String | `Default` | Description |
+
+## Troubleshooting ⚠️
+- **Issue**: Description
+  - **Solution**: Fix description
+```
+
+### Content Guidelines
+
+#### Always Update Documentation When:
+- Adding new parameters to scripts
+- Changing script functionality
+- Adding new features or modes
+- Modifying IaC workflows
+- Updating dependencies or requirements
+
+#### Documentation Tone:
+- **Professional** but **approachable**
+- **Clear** and **concise**
+- **Action-oriented** - tell users what to do
+- **IaC-focused** - emphasize automation and reproducibility
+
+### Visual Enhancement
+
+#### Use Tables for Parameters:
+```markdown
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `InstallPath` | String | `$env:USERPROFILE\OBS-Studio-Portable` | Directory where OBS Studio will be installed |
+| `WhatIf` | Switch | `$false` | Show what would be done without making changes (dry-run mode) |
+```
+
+#### Use Code Blocks with Syntax Highlighting:
+```markdown
+\```powershell
+# PowerShell examples with syntax highlighting
+.\Setup-OBSPortable.ps1 -InstallPath "C:\MyApps\OBS" -WhatIf
+\```
+
+\```bash
+# Command line examples
+powershell -ExecutionPolicy Bypass -File .\Setup-OBSPortable.ps1
+\```
+```
+
+#### Use Callout Boxes:
+```markdown
+> ⚠️ **Warning**: Important security or compatibility information
+> 
+> 📝 **Note**: Additional helpful information
+> 
+> ✅ **Tip**: Best practice recommendations
+```
+
+## IaC Documentation Requirements
+
+### Emphasize Infrastructure Aspects:
+- **Reproducible deployments**
+- **Version-controlled infrastructure**
+- **Idempotent operations**
+- **Environment consistency**
+- **Automated provisioning**
+
+### Include Operational Information:
+```markdown
+## Infrastructure Details 🏗️
+
+### Supported Environments
+- Windows 10/11
+- PowerShell 5.0+
+- Network connectivity required
+
+### Deployment Modes
+1. **Normal Mode**: Full infrastructure deployment
+2. **WhatIf Mode**: Infrastructure planning (dry-run)
+3. **Check Mode**: Environment validation only
+
+### Automation Features
+- ✅ Automated dependency checking
+- ✅ Version management
+- ✅ Configuration validation
+- ✅ Rollback capabilities
+```
+
+## Version Control Integration
+
+### Keep Documentation in Sync:
+- Update README.md with every functional change
+- Maintain changelog for version history
+- Document breaking changes clearly
+- Include migration guides when needed
+
+### Git-Friendly Formatting:
+- Use consistent line breaks
+- Avoid overly long lines
+- Structure for easy diffing
+- Include meaningful commit messages for doc changes
+
+## Examples and Templates
+
+### Usage Example Template:
+```markdown
+## Usage Examples 📖
+
+### Quick Start 🚀
+\```powershell
+# Basic installation
+.\Setup-OBSPortable.ps1
+\```
+
+### Advanced Configuration 🔧
+\```powershell
+# Custom path with verbose logging
+.\Setup-OBSPortable.ps1 -InstallPath "C:\MyApps\OBS" -LogPath "C:\Logs" -VerboseLogging
+\```
+
+### Dry-Run Mode 🧪
+\```powershell
+# See what would be done without making changes
+.\Setup-OBSPortable.ps1 -WhatIf
+\```
+
+### Environment Check 🔍
+\```powershell
+# Validate environment and dependencies only
+.\Setup-OBSPortable.ps1 -Check
+\```
+```
+
+Remember: Documentation is part of the infrastructure - keep it current, comprehensive, and user-friendly! 📚

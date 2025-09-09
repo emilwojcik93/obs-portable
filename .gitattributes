@@ -1,0 +1,191 @@
+# OBS Studio Portable Setup Repository - Git Attributes File
+# Defines how Git handles line endings and file types for cross-platform compatibility
+
+# ===================================
+# Global Line Ending Settings
+# ===================================
+
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# ===================================
+# PowerShell Files
+# ===================================
+
+# PowerShell scripts - Windows line endings (CRLF)
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.ps1xml text eol=crlf
+
+# PowerShell data files
+*.psc1 text eol=crlf
+*.pssc text eol=crlf
+
+# ===================================
+# Documentation Files
+# ===================================
+
+# Markdown files - normalize line endings
+*.md text eol=lf
+*.markdown text eol=lf
+*.mdown text eol=lf
+*.mkd text eol=lf
+
+# Text documentation
+*.txt text eol=lf
+*.rst text eol=lf
+
+# ===================================
+# Configuration Files
+# ===================================
+
+# JSON configuration files
+*.json text eol=lf
+
+# XML configuration files
+*.xml text eol=lf
+*.config text eol=lf
+
+# YAML configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# INI files (Windows-style)
+*.ini text eol=crlf
+
+# ===================================
+# Cursor AI Rules
+# ===================================
+
+# Cursor rules files (MDC format)
+*.mdc text eol=lf
+
+# ===================================
+# Git Configuration
+# ===================================
+
+# Git configuration files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.gitmodules text eol=lf
+
+# ===================================
+# Shell Scripts
+# ===================================
+
+# Bash scripts (if any)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Batch files (Windows)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ===================================
+# Web and Data Files
+# ===================================
+
+# HTML files
+*.html text eol=lf
+*.htm text eol=lf
+
+# CSS files
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+
+# JavaScript files
+*.js text eol=lf
+*.ts text eol=lf
+
+# CSV and data files
+*.csv text eol=lf
+*.tsv text eol=lf
+
+# ===================================
+# Binary Files
+# ===================================
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+
+# Archives and executables
+*.zip binary
+*.7z binary
+*.tar binary
+*.gz binary
+*.exe binary
+*.dll binary
+*.msi binary
+
+# Office documents
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+*.pdf binary
+
+# ===================================
+# Log Files
+# ===================================
+
+# Log files - preserve as-is to maintain original formatting
+*.log binary
+*.etl binary
+
+# ===================================
+# Language and Encoding
+# ===================================
+
+# Ensure PowerShell files are treated with proper encoding
+*.ps1 working-tree-encoding=UTF-8
+*.psm1 working-tree-encoding=UTF-8
+*.psd1 working-tree-encoding=UTF-8
+
+# Markdown files with UTF-8 encoding
+*.md working-tree-encoding=UTF-8
+
+# ===================================
+# Diff and Merge Settings
+# ===================================
+
+# PowerShell files - use built-in diff
+*.ps1 diff=powershell
+*.psm1 diff=powershell
+*.psd1 diff=powershell
+
+# JSON files - use built-in JSON diff if available
+*.json diff=json
+
+# ===================================
+# Export Ignore
+# ===================================
+
+# Files to exclude from git archive exports
+.gitignore export-ignore
+.gitattributes export-ignore
+.cursor/ export-ignore
+test-* export-ignore
+*.tmp export-ignore
+*.log export-ignore
+
+# ===================================
+# Merge Strategies
+# ===================================
+
+# Documentation files - prefer union merge for less conflicts
+*.md merge=union
+README.md merge=union
+
+# Configuration files - require manual merge
+*.json merge=ours
+*.config merge=ours
+

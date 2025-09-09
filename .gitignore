@@ -1,0 +1,51 @@
+# OBS Studio Installation and Configuration
+OBS-Studio-Portable/
+*.obs
+*.ini
+*.json
+config/
+data/
+logs/
+
+# PowerShell and Windows
+*.log
+*.tmp
+*.temp
+Thumbs.db
+desktop.ini
+
+# Service Scripts (generated at runtime)
+OBSAutoRecord.ps1
+OBSShutdownHandler.ps1
+GPOShutdown.ps1
+
+# Development History
+.history/
+**/.history/
+*_backup.ps1
+*_old.ps1
+*_temp.ps1
+
+# User-specific files
+*.user
+*.suo
+*.cache
+
+# Temporary test files
+Test-*.ps1
+!Test-Notifications.ps1
+
+# System files
+$RECYCLE.BIN/
+.DS_Store
+.vscode/
+.vs/
+
+# Logs and debugging
+*.log
+debug.txt
+trace.txt
+
+# Package managers
+node_modules/
+packages/

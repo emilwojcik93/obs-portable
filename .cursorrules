@@ -1,0 +1,87 @@
+# OBS Studio Portable Infrastructure as Code
+
+You are an AI assistant for the OBS Studio Portable Infrastructure as Code repository.
+
+## Repository Context
+
+This repository provides automated OBS Studio deployment with:
+- Hardware-aware performance optimization (5-tier PerformanceMode system)
+- Advanced monitor detection with real manufacturer names
+- Microsoft OneDrive/SharePoint integration
+- Enterprise-grade scheduled tasks and protection systems
+- Interactive first-time setup with post-configuration automation
+
+## Key Technical Knowledge
+
+### OBS Working Directory Requirement
+OBS Studio MUST be launched from `bin\64bit` directory for dependency resolution:
+```powershell
+Push-Location "${OBSPath}\bin\64bit"
+Start-Process -FilePath ".\obs64.exe" -WorkingDirectory $PWD
+Pop-Location
+```
+
+### Performance Mode System
+Unified `-PerformanceMode` parameter accepts: 33, 50, 60, 75, 90 (% scaling)
+- 33% = Extreme performance (encoder overload prevention)
+- 50% = Ultra-lightweight  
+- 60% = Default (optimal for most systems)
+- 75% = Optimized for older hardware
+- 90% = Standard quality
+
+### Hardware Detection Patterns
+- Filter DisplayLink devices: "USB Display Adapter (docking station)"
+- Use WMI WmiMonitorID for real monitor names (Philips PHL 499P9)
+- GPU priority: NVIDIA NVENC → Intel QuickSync → AMD AMF → x264
+
+## Coding Standards
+
+### PowerShell Requirements
+- ASCII/UTF-8 only (no Unicode symbols in .ps1 files)
+- Variable bracketing: `${var}%` instead of `$var%` for special characters
+- Approved PowerShell verbs: Get-, Set-, Test-, New-, Remove-
+- Comprehensive error handling with try/catch/finally
+
+### Documentation Standards  
+- Unicode allowed in .md files (✅ ❌ 🚀 📝 etc.)
+- Include real command outputs and examples
+- Update docs with every functional change
+- Provide troubleshooting based on actual development issues
+
+## Architecture Principles
+
+### Interactive Setup Approach
+- Launch OBS for user to complete Auto-Configuration Wizard
+- User adds Display Capture source manually
+- Script optimizes existing configuration afterward
+- Respects OBS internal mechanisms while providing automation
+
+### Configuration Verification
+Always verify settings were applied:
+```powershell
+$verifyConfig = Get-Content -Path $profilePath -Raw
+$actualBaseCX = if ($verifyConfig -match "BaseCX=(\d+)") { $matches[1] } else { "Not Set" }
+```
+
+### Protection System Design
+- Background jobs for auto-stop (no admin required)
+- Scheduled tasks for system events (requires admin)
+- 20-second graceful shutdown timeout for large files
+
+## Common Issues and Solutions
+
+1. **Encoder Overload**: Use lower PerformanceMode (50 or 33)
+2. **Working Directory**: Always launch OBS from bin\64bit
+3. **Display Detection**: Use WMI for accurate monitor information
+4. **Configuration**: Wait for OBS wizard completion before optimization
+5. **Admin Rights**: Provide clear elevation instructions when needed
+
+## Quality Assurance
+
+- Test all PerformanceMode values (33, 50, 60, 75, 90)
+- Verify configuration verification shows actual applied values
+- Ensure CheckOnly mode never waits for user input
+- Test display selection with single and dual monitor setups
+- Validate all GPU types (Intel, NVIDIA, AMD) with appropriate optimizations
+
+Follow Infrastructure as Code principles: idempotent, declarative, version-controlled, and thoroughly tested.
