@@ -10,6 +10,9 @@ on:
 jobs:
   health-check:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      issues: write
     
     steps:
     - name: 🔄 Checkout Repository
@@ -236,57 +239,35 @@ jobs:
         Write-Host ""
         Write-Host "📅 Next health check: $(Get-Date (Get-Date).AddDays(7) -Format 'yyyy-MM-dd')" -ForegroundColor Gray
 
-    - name: 🚨 Create Issue on Failure
+    - name: 🚨 Log Failure Details
       if: steps.script_test.outputs.SCRIPT_STATUS == 'FAIL' || steps.obs_version_test.outputs.VERSION_STATUS == 'FAIL' || steps.download_test.outputs.DOWNLOAD_STATUS == 'FAIL'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const scriptStatus = '${{ steps.script_test.outputs.SCRIPT_STATUS }}';
-          const versionStatus = '${{ steps.obs_version_test.outputs.VERSION_STATUS }}';
-          const downloadStatus = '${{ steps.download_test.outputs.DOWNLOAD_STATUS }}';
-          
-          let issueBody = `# 🚨 Weekly Health Check Failed
-          
-          ## 📊 Health Check Results
-          - **Script Functionality**: ${scriptStatus}
-          - **OBS Version Detection**: ${versionStatus}
-          - **Download Link Availability**: ${downloadStatus}
-          
-          ## 🔍 Details
-          `;
-          
-          if (scriptStatus === 'FAIL') {
-            issueBody += `\n### Script Execution Error\n\`\`\`\n${{ steps.script_test.outputs.SCRIPT_ERROR }}\n\`\`\`\n`;
-          }
-          
-          if (versionStatus === 'FAIL') {
-            issueBody += `\n### Version Detection Error\n\`\`\`\n${{ steps.obs_version_test.outputs.VERSION_ERROR }}\n\`\`\`\n`;
-          }
-          
-          if (downloadStatus === 'FAIL') {
-            issueBody += `\n### Download Link Error\n\`\`\`\n${{ steps.download_test.outputs.DOWNLOAD_ERROR }}\n\`\`\`\n`;
-          }
-          
-          issueBody += `\n## 🔧 Recommended Actions
-          1. Check OBS Studio repository for API changes
-          2. Verify GitHub API rate limits and authentication
-          3. Test script functionality manually
-          4. Update download URL patterns if needed
-          
-          ## 📅 Context
-          - **Workflow Run**: ${{ github.run_id }}
-          - **Commit**: ${{ github.sha }}
-          - **Date**: ${new Date().toISOString()}
-          
-          This issue was automatically created by the weekly health check workflow.`;
-          
-          github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: '🚨 Weekly Health Check Failed - Infrastructure Needs Attention',
-            body: issueBody,
-            labels: ['bug', 'infrastructure', 'automated']
-          });
+      shell: pwsh
+      run: |
+        Write-Host "=== Infrastructure Failure Detected ===" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "📊 Health Check Results:" -ForegroundColor Yellow
+        Write-Host "- Script Functionality: ${{ steps.script_test.outputs.SCRIPT_STATUS }}" -ForegroundColor White
+        Write-Host "- OBS Version Detection: ${{ steps.obs_version_test.outputs.VERSION_STATUS }}" -ForegroundColor White
+        Write-Host "- Download Link Availability: ${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" -ForegroundColor White
+        Write-Host ""
+        
+        if ("${{ steps.script_test.outputs.SCRIPT_STATUS }}" -eq "FAIL") {
+          Write-Host "🔍 Script Error Details:" -ForegroundColor Red
+          Write-Host "${{ steps.script_test.outputs.SCRIPT_ERROR }}" -ForegroundColor White
+        }
+        
+        if ("${{ steps.obs_version_test.outputs.VERSION_STATUS }}" -eq "FAIL") {
+          Write-Host "🔍 Version Detection Error:" -ForegroundColor Red
+          Write-Host "${{ steps.obs_version_test.outputs.VERSION_ERROR }}" -ForegroundColor White
+        }
+        
+        if ("${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" -eq "FAIL") {
+          Write-Host "🔍 Download Link Error:" -ForegroundColor Red
+          Write-Host "${{ steps.download_test.outputs.DOWNLOAD_ERROR }}" -ForegroundColor White
+        }
+        
+        Write-Host ""
+        Write-Host "🔧 Manual investigation required for failed components" -ForegroundColor Yellow
 
     - name: 📈 Update Repository Health Badge
       if: always()
