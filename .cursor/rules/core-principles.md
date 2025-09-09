@@ -117,6 +117,31 @@ This repository provides **Infrastructure as Code (IaC) automation** for OBS Stu
 .\Deploy-OBSStudio.ps1 -WhatIf        # Dry-run preview
 ```
 
+## CI/CD Workflow Architecture
+
+### Modular Script Structure
+- **`.github/scripts/`**: Individual test scripts for each validation category
+- **`.github/tests/`**: Local test runner for development
+- **`.github/templates/`**: Release notes and documentation templates
+- **`.github/workflows/`**: Clean YAML files calling external scripts
+
+### Test Scripts
+- **`test-script-syntax.ps1`**: PowerShell syntax validation
+- **`test-checkonly-mode.ps1`**: CheckOnly functionality with file logging
+- **`test-performance-modes.ps1`**: All 5 performance tiers (33-90%)
+- **`test-help-documentation.ps1`**: Help system validation
+- **`test-obs-version.ps1`**: GitHub API and version detection
+- **`test-download-links.ps1`**: Download accessibility validation
+- **`generate-health-report.ps1`**: Comprehensive health reporting
+- **`generate-release-notes.ps1`**: Template-based release note generation
+
+### Workflow Standards
+- **Windows Server 2025**: Eliminates migration warnings
+- **ASCII Only**: No Unicode characters in workflow names or step names
+- **Execution Policy**: All scripts use `powershell -ExecutionPolicy Bypass -File`
+- **File Logging**: Reliable output capture using `-LogToFile` parameter
+- **Local Testing**: All workflows can be tested locally using `.github/tests/run-all-tests.ps1`
+
 ## Success Metrics
 
 - **Hardware Detection Accuracy**: Real monitor names, correct resolutions
@@ -124,3 +149,4 @@ This repository provides **Infrastructure as Code (IaC) automation** for OBS Stu
 - **Performance Optimization**: Encoder overload prevention across hardware tiers
 - **User Experience**: Clear output, helpful error messages, intuitive parameters
 - **Enterprise Ready**: Scheduled tasks, notifications, protection systems
+- **CI/CD Reliability**: All workflows passing consistently with modular architecture
