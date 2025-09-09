@@ -154,16 +154,16 @@ if ($script:RequiresElevation) {
             }
         }
 
-        # Add marker to detect elevated session
+        # Add marker to detect elevated session and prevent window closure
         $argList += "-ElevatedSession"
 
-        # Determine execution method (local vs remote)
+        # Determine execution method (local vs remote) - simplified approach
         $script = if ($PSCommandPath) {
             # Local execution
-            "& { & `'$($PSCommandPath)`' $($argList -join ' ') }"
+            "& `'$($PSCommandPath)`' $($argList -join ' '); Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Yellow; Read-Host"
         } else {
-            # Remote execution
-            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')"
+            # Remote execution  
+            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' '); Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Yellow; Read-Host"
         }
 
         # Choose best terminal (Windows Terminal > PowerShell 7 > Windows PowerShell)
@@ -187,10 +187,21 @@ if ($script:RequiresElevation) {
     } else {
         Write-Host "Running with administrator privileges" -ForegroundColor Green
         
-        # Check if this is an elevated session
+        # Check if this is an elevated session (marked by parameter or launched by elevation)
         if ($ElevatedSession) {
             $script:IsElevatedSession = $true
             Write-Host "Detected elevated session - will pause at completion for review" -ForegroundColor Cyan
+        }
+        
+        # Also detect if launched from a different process (indicating elevation)
+        try {
+            $parentProcess = Get-Process -Id (Get-WmiObject -Class Win32_Process -Filter "ProcessId=$PID").ParentProcessId -ErrorAction SilentlyContinue
+            if ($parentProcess -and $parentProcess.ProcessName -match "^(explorer|winlogon|services)$") {
+                $script:IsElevatedSession = $true
+                Write-Host "Detected elevated session (launched from system process)" -ForegroundColor Cyan
+            }
+        } catch {
+            # Ignore errors in parent process detection
         }
     }
 }
@@ -2061,23 +2072,5 @@ try {
     
 } catch {
     Write-Error "Deployment failed: $($_.Exception.Message)"
-    
-    # Pause for elevated sessions to allow error review
-    if ($script:IsElevatedSession) {
-        Write-Host ""
-        Write-Host "Press any key to close this elevated window..." -ForegroundColor Yellow
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    }
-    
     exit 1
-}
-
-# Pause for elevated sessions to allow result review
-if ($script:IsElevatedSession) {
-    Write-Host ""
-    Write-Host "=== Elevated Session Complete ===" -ForegroundColor Green
-    Write-Host "Deployment completed successfully in elevated mode." -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Press any key to close this window..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
