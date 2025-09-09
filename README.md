@@ -39,7 +39,7 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 ### **⚡ TLDR - One Command Setup**
 ```powershell
 # Remote execution - Complete setup with all features (run in Terminal as Admin)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay"
 
 # What this does:
 # ✅ Downloads and installs OBS Studio portable (latest version)
@@ -54,7 +54,7 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 ### **🔴 Encoder Overload Prevention**
 ```powershell
 # For severe encoder overload (33% scaling) - run in Terminal as Admin
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -PerformanceMode 33
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -PerformanceMode 33"
 ```
 
 ### **📋 Local Installation**
@@ -609,25 +609,25 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 #### **🔴 Encoder Overload Prevention**
 ```powershell
 # Ultra-lightweight (50% scaling)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications"
 
 # Extreme performance (33% scaling)  
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications"
 ```
 
 #### **🏢 Enterprise Deployment**
 ```powershell
 # Full enterprise setup with auto-recording (requires admin)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications"
 ```
 
 #### **🧪 Testing and Validation**
 ```powershell
 # Preview settings without making changes
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -CheckOnly -PerformanceMode 50
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -CheckOnly -PerformanceMode 50"
 
 # Test notifications system
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -TestNotifications
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -TestNotifications"
 ```
 
 #### **📡 Alternative: iwr | iex Method**
