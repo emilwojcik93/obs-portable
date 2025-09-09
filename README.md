@@ -43,7 +43,7 @@ powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm ht
 
 # What this does:
 # ✅ Downloads and installs OBS Studio portable (latest version)
-# ✅ Installs Input Overlay plugin with Thomson Reuters template
+# ✅ Installs Input Overlay plugin with custom template
 # ✅ Installs OpenVINO plugins for Intel AI webcam effects
 # ✅ Detects your hardware (GPU, display, OneDrive) with verbose output
 # ✅ Configures optimal settings (50% scaling for encoder overload prevention)
@@ -95,7 +95,7 @@ powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm ht
 # OpenVINO only (Intel AI webcam effects)
 .\Deploy-OBSStudio.ps1 -Force -InstallOpenVINO -PerformanceMode 90
 
-# Gaming setup with Thomson Reuters input monitoring
+# Gaming setup with custom input monitoring
 .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -PerformanceMode 50
 ```
 
