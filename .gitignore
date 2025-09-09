@@ -31,9 +31,10 @@ GPOShutdown.ps1
 *.suo
 *.cache
 
-# Temporary test files
+# Temporary test files (but allow workflow test scripts)
 Test-*.ps1
 !Test-Notifications.ps1
+!.github/scripts/test-*.ps1
 
 # System files
 $RECYCLE.BIN/
