@@ -45,6 +45,16 @@ $RECYCLE.BIN/
 *.log
 debug.txt
 trace.txt
+test-*.txt
+ci-*.txt
+health-*.txt
+*-output.txt
+*-test.txt
+**/*test*.txt
+**/*log*.txt
+**/*output*.txt
+**/*-test.txt
+**/*-output.txt
 
 # Package managers
 node_modules/
