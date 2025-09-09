@@ -123,14 +123,23 @@ param(
     [switch]$InstallInputOverlay,
     
     [Parameter(HelpMessage="Install OpenVINO plugins for Intel hardware acceleration (webcam effects)")]
-    [switch]$InstallOpenVINO
+    [switch]$InstallOpenVINO,
+    
+    [Parameter(DontShow)]
+    [switch]$ElevatedSession
 )
 
 $ErrorActionPreference = "Stop"
 
+# Detect if running in elevated session (to prevent window closure)
+$script:IsElevatedSession = $false
+$script:RequiresElevation = $InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO
+
 # Auto-elevation for admin required operations (inspired by winutil)
-if ($InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO) {
-    if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if ($script:RequiresElevation) {
+    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    
+    if (-not $isAdmin) {
         Write-Host "Admin rights required for requested operations. Attempting to relaunch with elevation..." -ForegroundColor Yellow
         
         # Build argument list preserving all parameters
@@ -144,6 +153,9 @@ if ($InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO) {
                 "-$($_.Key) '$($_.Value)'"
             }
         }
+
+        # Add marker to detect elevated session
+        $argList += "-ElevatedSession"
 
         # Determine execution method (local vs remote)
         $script = if ($PSCommandPath) {
@@ -171,6 +183,14 @@ if ($InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO) {
             Write-Error "Failed to launch elevated session: $($_.Exception.Message)"
             Write-Warning "Please run the script manually as Administrator for full functionality"
             return
+        }
+    } else {
+        Write-Host "Running with administrator privileges" -ForegroundColor Green
+        
+        # Check if this is an elevated session
+        if ($ElevatedSession) {
+            $script:IsElevatedSession = $true
+            Write-Host "Detected elevated session - will pause at completion for review" -ForegroundColor Cyan
         }
     }
 }
@@ -2041,5 +2061,23 @@ try {
     
 } catch {
     Write-Error "Deployment failed: $($_.Exception.Message)"
+    
+    # Pause for elevated sessions to allow error review
+    if ($script:IsElevatedSession) {
+        Write-Host ""
+        Write-Host "Press any key to close this elevated window..." -ForegroundColor Yellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    }
+    
     exit 1
+}
+
+# Pause for elevated sessions to allow result review
+if ($script:IsElevatedSession) {
+    Write-Host ""
+    Write-Host "=== Elevated Session Complete ===" -ForegroundColor Green
+    Write-Host "Deployment completed successfully in elevated mode." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Press any key to close this window..." -ForegroundColor Yellow
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
