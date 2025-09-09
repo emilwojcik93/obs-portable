@@ -1,0 +1,129 @@
+name: 🧪 Continuous Integration Test
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'Deploy-OBSStudio.ps1' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'Deploy-OBSStudio.ps1' ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 🔄 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🧪 Test Script Syntax
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing PowerShell Script Syntax ===" -ForegroundColor Yellow
+        
+        try {
+          # Test script syntax without execution
+          $null = Get-Command .\Deploy-OBSStudio.ps1 -Syntax -ErrorAction Stop
+          Write-Host "✅ Script syntax is valid" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Script syntax error: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+    - name: 🔍 Test CheckOnly Mode
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing CheckOnly Mode ===" -ForegroundColor Yellow
+        
+        try {
+          # Test CheckOnly mode (should not make any changes)
+          $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 2>&1
+          
+          # Verify expected output patterns
+          $hasSystemAnalysis = $result -match "System Configuration Analysis"
+          $hasConfigPreview = $result -match "Configuration Preview"
+          $hasEnvironmentCheck = $result -match "Environment check complete"
+          
+          if ($hasSystemAnalysis -and $hasConfigPreview -and $hasEnvironmentCheck) {
+            Write-Host "✅ CheckOnly mode working correctly" -ForegroundColor Green
+          } else {
+            Write-Host "❌ CheckOnly mode missing expected output" -ForegroundColor Red
+            Write-Host "System Analysis: $hasSystemAnalysis" -ForegroundColor Gray
+            Write-Host "Config Preview: $hasConfigPreview" -ForegroundColor Gray
+            Write-Host "Environment Check: $hasEnvironmentCheck" -ForegroundColor Gray
+            exit 1
+          }
+          
+        } catch {
+          Write-Host "❌ CheckOnly test failed: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+    - name: 🎛️ Test Performance Mode Parameters
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing Performance Mode Parameters ===" -ForegroundColor Yellow
+        
+        $modes = @("33", "50", "60", "75", "90")
+        $failed = $false
+        
+        foreach ($mode in $modes) {
+          try {
+            Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
+            $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
+            
+            # Check for performance mode specific output
+            $hasCorrectMode = $result -match "Performance Mode:.*$mode"
+            
+            if ($hasCorrectMode) {
+              Write-Host "  ✅ Mode $mode: PASS" -ForegroundColor Green
+            } else {
+              Write-Host "  ❌ Mode $mode: FAIL" -ForegroundColor Red
+              $failed = $true
+            }
+            
+          } catch {
+            Write-Host "  ❌ Mode $mode: ERROR - $($_.Exception.Message)" -ForegroundColor Red
+            $failed = $true
+          }
+        }
+        
+        if ($failed) {
+          Write-Host "❌ Some performance modes failed testing" -ForegroundColor Red
+          exit 1
+        } else {
+          Write-Host "✅ All performance modes tested successfully" -ForegroundColor Green
+        }
+
+    - name: 📋 Test Help Documentation
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing Help Documentation ===" -ForegroundColor Yellow
+        
+        try {
+          # Test that help can be retrieved
+          $help = Get-Help .\Deploy-OBSStudio.ps1 -ErrorAction Stop
+          
+          if ($help.Synopsis -and $help.Description) {
+            Write-Host "✅ Help documentation is accessible" -ForegroundColor Green
+            Write-Host "Synopsis: $($help.Synopsis)" -ForegroundColor White
+          } else {
+            Write-Host "❌ Help documentation incomplete" -ForegroundColor Red
+            exit 1
+          }
+          
+        } catch {
+          Write-Host "❌ Help documentation test failed: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+    - name: ✅ CI Test Summary
+      shell: pwsh
+      run: |
+        Write-Host "=== CI Test Summary ===" -ForegroundColor Green
+        Write-Host "✅ Script syntax validation passed" -ForegroundColor Green
+        Write-Host "✅ CheckOnly mode functionality verified" -ForegroundColor Green
+        Write-Host "✅ All performance modes tested successfully" -ForegroundColor Green
+        Write-Host "✅ Help documentation accessible" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "🚀 Deploy-OBSStudio.ps1 is ready for deployment!" -ForegroundColor Green
