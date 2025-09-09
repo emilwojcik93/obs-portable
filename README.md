@@ -36,10 +36,24 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 
 ## 🚀 Quick Start
 
-### **Complete Infrastructure Deployment**
+### **⚡ TLDR - One Command Setup**
 ```powershell
-# Full deployment with all features (Admin required for scheduled tasks)
-.\Deploy-OBSStudio.ps1 -Force -InstallScheduledTasks -EnableNotifications -VerboseLogging
+# Remote execution - Most common setup (no download required)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
+
+# What this does:
+# ✅ Downloads and installs OBS Studio portable
+# ✅ Detects your hardware (GPU, display, OneDrive)  
+# ✅ Configures optimal settings (60% scaling, 3000 kbps)
+# ✅ Shows balloon notifications for recording status
+# ✅ Ready to record in ~2 minutes
+```
+
+### **📋 Local Installation**
+```powershell
+# Download script locally first, then run
+Invoke-WebRequest -Uri "https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1" -OutFile "Deploy-OBSStudio.ps1"
+.\Deploy-OBSStudio.ps1 -Force -EnableNotifications
 ```
 
 ### **Performance-Optimized Deployment**
@@ -573,11 +587,55 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 #         Intel GPU: Using QuickSync encoding (extreme performance - severe overload prevention)
 ```
 
+## 🌐 Remote Execution Guide
+
+### **⚡ TLDR - One Command Remote Setup**
+```powershell
+# Most common setup - no download required, ready in ~2 minutes
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
+```
+**What this does**: Downloads OBS, detects hardware, configures optimal settings (60% scaling), enables notifications
+
+### **📋 Remote Use Cases**
+
+#### **🔴 Encoder Overload Prevention**
+```powershell
+# Ultra-lightweight (50% scaling)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications
+
+# Extreme performance (33% scaling)  
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications
+```
+
+#### **🏢 Enterprise Deployment**
+```powershell
+# Full enterprise setup with auto-recording (requires admin)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications
+```
+
+#### **🧪 Testing and Validation**
+```powershell
+# Preview settings without making changes
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -CheckOnly -PerformanceMode 50
+
+# Test notifications system
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -TestNotifications
+```
+
+#### **📡 Alternative: iwr | iex Method**
+```powershell
+# Shorter syntax (runs with default parameters only)
+iwr https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1 | iex
+```
+
+**Note**: ScriptBlock method is preferred as it allows parameter passing, while `iwr | iex` uses default settings only.
+
 ## 🔧 Files Overview
 
 | File | Purpose | Description |
 |------|---------|-------------|
-| `Deploy-OBSStudio.ps1` | Main IaC Script | Complete deployment automation with all features |
-| `Test-Notifications.ps1` | Testing Utility | Standalone notification system testing |
-| `README.md` | Documentation | Comprehensive usage and technical documentation |
-| `.gitignore` | Git Configuration | Excludes generated files and installations |
+| `Deploy-OBSStudio.ps1` | Main IaC Script | Complete deployment automation with 5-tier performance system |
+| `README.md` | Documentation | Comprehensive usage, performance guides, and remote execution |
+| `.cursorrules` | AI Assistant | Modern Cursor AI rules for development assistance |
+| `.gitignore` | Git Configuration | Excludes generated files, installations, and history |
+| `.github/workflows/` | CI/CD | Automated release workflow for GitHub assets |
