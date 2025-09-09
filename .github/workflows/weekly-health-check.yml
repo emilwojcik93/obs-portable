@@ -23,7 +23,7 @@ jobs:
       shell: pwsh
       run: |
         try {
-          .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
+          powershell -ExecutionPolicy Bypass -File .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
           echo "SCRIPT_STATUS=PASS" >> $env:GITHUB_OUTPUT
         } catch {
           echo "SCRIPT_STATUS=FAIL" >> $env:GITHUB_OUTPUT
@@ -34,7 +34,7 @@ jobs:
       id: obs_version_test
       shell: pwsh
       run: |
-        $output = .github/scripts/test-obs-version.ps1 | Out-String
+        $output = powershell -ExecutionPolicy Bypass -File .github/scripts/test-obs-version.ps1 | Out-String
         $output -split "`n" | ForEach-Object {
           if ($_ -match "^(VERSION_STATUS|OBS_VERSION|VERSION_ERROR)=(.+)$") {
             echo "$($matches[1])=$($matches[2])" >> $env:GITHUB_OUTPUT
@@ -45,7 +45,7 @@ jobs:
       id: download_test
       shell: pwsh
       run: |
-        $output = .github/scripts/test-download-links.ps1 | Out-String
+        $output = powershell -ExecutionPolicy Bypass -File .github/scripts/test-download-links.ps1 | Out-String
         $output -split "`n" | ForEach-Object {
           if ($_ -match "^(DOWNLOAD_STATUS|DOWNLOAD_SIZE_MB|DOWNLOAD_ERROR)=(.+)$") {
             echo "$($matches[1])=$($matches[2])" >> $env:GITHUB_OUTPUT
@@ -57,7 +57,7 @@ jobs:
       shell: pwsh
       run: |
         try {
-          .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
+          powershell -ExecutionPolicy Bypass -File .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
           echo "PERFORMANCE_STATUS=PASS" >> $env:GITHUB_OUTPUT
           echo "PERFORMANCE_PASS_COUNT=5" >> $env:GITHUB_OUTPUT
           echo "PERFORMANCE_TOTAL_COUNT=5" >> $env:GITHUB_OUTPUT
@@ -70,7 +70,7 @@ jobs:
     - name: 📊 Generate Health Report
       shell: pwsh
       run: |
-        .github/scripts/generate-health-report.ps1 `
+        powershell -ExecutionPolicy Bypass -File .github/scripts/generate-health-report.ps1 `
           -ScriptStatus "${{ steps.script_test.outputs.SCRIPT_STATUS }}" `
           -VersionStatus "${{ steps.obs_version_test.outputs.VERSION_STATUS }}" `
           -DownloadStatus "${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" `
