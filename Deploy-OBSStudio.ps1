@@ -167,13 +167,22 @@ if ($script:RequiresElevation) {
             # Local execution
             @"
 try {
+    Set-Location '$PWD'
     & '$($PSCommandPath)' $($argList -join ' ')
+    `$exitCode = `$LASTEXITCODE
 } catch {
     Write-Error `$_.Exception.Message
+    `$exitCode = 1
 }
 Write-Host ''
 Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
-Write-Host 'Press any key to close this elevated window...' -ForegroundColor Yellow
+if (`$exitCode -eq 0) {
+    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
+}
+Write-Host ''
+Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
 `$null = Read-Host
 Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
 "@
@@ -181,20 +190,41 @@ Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
             # Remote execution
             @"
 try {
+    Set-Location '$PWD'
     &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
+    `$exitCode = `$LASTEXITCODE
 } catch {
     Write-Error `$_.Exception.Message
+    `$exitCode = 1
 }
 Write-Host ''
 Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
-Write-Host 'Press any key to close this elevated window...' -ForegroundColor Yellow
+if (`$exitCode -eq 0) {
+    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
+}
+Write-Host ''
+Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
 `$null = Read-Host
 Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
 "@
         }
         
-        # Write wrapper script
-        $wrapperContent | Out-File -FilePath $wrapperScript -Encoding UTF8
+        # Write wrapper script and ensure it exists
+        try {
+            $wrapperContent | Out-File -FilePath $wrapperScript -Encoding UTF8 -Force
+            Start-Sleep -Milliseconds 500  # Give filesystem time to sync
+            
+            if (-not (Test-Path $wrapperScript)) {
+                throw "Wrapper script was not created successfully"
+            }
+            
+            Write-Host "Wrapper script created: $wrapperScript" -ForegroundColor Cyan
+        } catch {
+            Write-Error "Failed to create wrapper script: $($_.Exception.Message)"
+            return
+        }
 
         # Choose best terminal (Windows Terminal > PowerShell 7 > Windows PowerShell)
         $powershellCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
@@ -2010,7 +2040,7 @@ try {
         }
         Write-Info "  Performance Mode: $modeDescription"
         Write-Success "Environment check complete - system ready"
-        return
+        exit 0
     }
     
     # Step 2: Install OBS Studio
