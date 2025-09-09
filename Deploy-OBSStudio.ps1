@@ -62,6 +62,9 @@ Complete IaC solution for OBS Studio portable deployment with:
 .EXAMPLE
     .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -InstallOpenVINO
     Install OBS Studio with Input Overlay and OpenVINO plugins for enhanced functionality
+.EXAMPLE
+    .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -PerformanceMode 50
+    Ultra-lightweight setup with Input Overlay for keyboard/mouse visualization
 .NOTES
     Author: OBS IaC Team
     Version: 2.0 - Unified Performance System
@@ -124,6 +127,53 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Auto-elevation for admin required operations (inspired by winutil)
+if ($InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO) {
+    if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Host "Admin rights required for requested operations. Attempting to relaunch with elevation..." -ForegroundColor Yellow
+        
+        # Build argument list preserving all parameters
+        $argList = @()
+        $PSBoundParameters.GetEnumerator() | ForEach-Object {
+            $argList += if ($_.Value -is [switch] -and $_.Value) {
+                "-$($_.Key)"
+            } elseif ($_.Value -is [array]) {
+                "-$($_.Key) $($_.Value -join ',')"
+            } elseif ($_.Value) {
+                "-$($_.Key) '$($_.Value)'"
+            }
+        }
+
+        # Determine execution method (local vs remote)
+        $script = if ($PSCommandPath) {
+            # Local execution
+            "& { & `'$($PSCommandPath)`' $($argList -join ' ') }"
+        } else {
+            # Remote execution
+            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')"
+        }
+
+        # Choose best terminal (Windows Terminal > PowerShell 7 > Windows PowerShell)
+        $powershellCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+        $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { "$powershellCmd" }
+
+        try {
+            if ($processCmd -eq "wt.exe") {
+                Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+            } else {
+                Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+            }
+            
+            Write-Host "Launched elevated session. Please check the new window." -ForegroundColor Green
+            return
+        } catch {
+            Write-Error "Failed to launch elevated session: $($_.Exception.Message)"
+            Write-Warning "Please run the script manually as Administrator for full functionality"
+            return
+        }
+    }
+}
 
 function Test-AdminRights {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -1962,6 +2012,21 @@ try {
                 Write-Info "OBS Studio is ready for recording"
                 Write-Info "Hardware: $($systemConfig.GPU.Name)"
                 Write-Info "Output: $($systemConfig.OneDrive.Path)"
+                
+                # Show plugin installation status
+                if ($InstallInputOverlay -or $InstallOpenVINO) {
+                    Write-Info ""
+                    Write-Info "Installed Plugins:"
+                    if ($InstallInputOverlay) {
+                        Write-Info "  + Input Overlay: Keyboard/mouse/gamepad visualization"
+                        Write-Info "    Presets: $InstallPath\data\input-overlay-presets\"
+                    }
+                    if ($InstallOpenVINO) {
+                        Write-Info "  + OpenVINO: AI-powered webcam effects (Intel hardware)"
+                        Write-Info "    Filters: Background Concealment, Face Mesh, Smart Framing"
+                    }
+                }
+                
                 $modeMessage = switch ($PerformanceMode) {
                     "33" { "Extreme performance mode: Severe encoder overload prevention enabled" }
                     "50" { "Ultra-lightweight mode: Maximum performance enabled" }
