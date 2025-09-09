@@ -39,8 +39,22 @@ jobs:
         
         try {
           # Test CheckOnly mode (should not make any changes) - use logging for reliable output capture
+          Write-Host "Running script with logging..." -ForegroundColor Cyan
           & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 -PrimaryDisplay -LogToFile "ci-test-output.txt"
-          $result = Get-Content "ci-test-output.txt"
+          
+          Write-Host "Checking if log file exists..." -ForegroundColor Cyan
+          if (Test-Path "ci-test-output.txt") {
+            Write-Host "Log file exists, reading content..." -ForegroundColor Green
+            $result = Get-Content "ci-test-output.txt"
+            Write-Host "Log file contains $($result.Count) lines" -ForegroundColor Green
+            if ($result.Count -gt 0) {
+              Write-Host "First few lines:" -ForegroundColor Cyan
+              $result | Select-Object -First 5 | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
+            }
+          } else {
+            Write-Host "Log file does not exist!" -ForegroundColor Red
+            $result = @()
+          }
           
           # Verify expected output patterns (ignore non-critical errors)
           $hasSystemAnalysis = $result -match "=== System Configuration Analysis ==="
