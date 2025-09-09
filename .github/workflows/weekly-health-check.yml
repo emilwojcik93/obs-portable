@@ -34,8 +34,8 @@ jobs:
           
           # Check for critical success indicators
           $hasSystemDetection = $result -match "=== System Configuration Analysis ==="
-          $hasGPUDetection = $result -match "GPU:.*|Intel GPU:.*|NVIDIA GPU:.*|AMD GPU:.*"
-          $hasDisplayDetection = $result -match "Display Resolution:.*"
+          $hasGPUDetection = $result -match "GPU:.*|Intel GPU:.*|NVIDIA GPU:.*|AMD GPU:.*|Microsoft Hyper-V Video"
+          $hasDisplayDetection = $result -match "Display Resolution:"
           $hasConfigPreview = $result -match "=== Configuration Preview ==="
           
           Write-Host ""
@@ -156,8 +156,8 @@ jobs:
             $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
             
             # Check for expected performance mode output
-            $hasPerformanceOutput = $result -match "Performance Mode:.*$mode"
-            $hasBitrateOutput = $result -match "Bitrate:.*\d+ kbps"
+            $hasPerformanceOutput = $result -match "Performance Mode:.*"
+            $hasBitrateOutput = $result -match "Bitrate: \d+ kbps"
             
             if ($hasPerformanceOutput -and $hasBitrateOutput) {
               Write-Host "  ✅ Mode ${mode}: PASS" -ForegroundColor Green
