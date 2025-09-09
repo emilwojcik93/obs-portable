@@ -25,8 +25,9 @@ jobs:
         Write-Host "=== Testing Deploy-OBSStudio.ps1 CheckOnly Mode ===" -ForegroundColor Yellow
         
         try {
-          # Test CheckOnly mode with verbose logging
-          $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -VerboseLogging -PerformanceMode 60 2>&1
+        # Test CheckOnly mode with verbose logging - use file logging for reliable capture
+        & .\Deploy-OBSStudio.ps1 -CheckOnly -VerboseLogging -PerformanceMode 60 -PrimaryDisplay -LogToFile "health-check-output.txt"
+        $result = Get-Content "health-check-output.txt"
           
           Write-Host "✅ Script executed successfully" -ForegroundColor Green
           Write-Host "Output:" -ForegroundColor Cyan
@@ -153,7 +154,8 @@ jobs:
         foreach ($mode in $performanceModes) {
           try {
             Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
-            $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
+            & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode -PrimaryDisplay -LogToFile "health-perf-${mode}.txt"
+            $result = Get-Content "health-perf-${mode}.txt"
             
             # Check for expected performance mode output (mode appears in parentheses with % sign)
             $hasPerformanceOutput = $result -match "Performance Mode:.*\(${mode}% scaling"

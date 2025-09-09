@@ -56,7 +56,7 @@
     Complete enterprise deployment with auto-recording service
 .NOTES
     Author: OBS IaC Team
-    Version: 2.0 - Unified Performance System (Workflow Tested)
+    Version: 2.0 - Unified Performance System
     Requires: PowerShell 5.0+, Windows 10/11
     GitHub: https://github.com/[username]/obs_studio-portable
 #>
@@ -72,6 +72,9 @@ param(
     
     [Parameter(HelpMessage="Only check environment and hardware")]
     [switch]$CheckOnly,
+    
+    [Parameter(HelpMessage="Log output to file for testing")]
+    [string]$LogToFile,
     
     [Parameter(HelpMessage="Force reinstallation")]
     [switch]$Force,
@@ -132,10 +135,26 @@ function Show-AdminCommand {
     Write-Host ""
 }
 
-function Write-Info { param([string]$Message) Write-Host $Message -ForegroundColor Cyan }
-function Write-Success { param([string]$Message) Write-Host $Message -ForegroundColor Green }
-function Write-Warning { param([string]$Message) Write-Host $Message -ForegroundColor Yellow }
-function Write-Error { param([string]$Message) Write-Host $Message -ForegroundColor Red }
+function Write-Info { 
+    param([string]$Message) 
+    Write-Host $Message -ForegroundColor Cyan 
+    if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
+}
+function Write-Success { 
+    param([string]$Message) 
+    Write-Host $Message -ForegroundColor Green 
+    if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
+}
+function Write-Warning { 
+    param([string]$Message) 
+    Write-Host $Message -ForegroundColor Yellow 
+    if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
+}
+function Write-Error { 
+    param([string]$Message) 
+    Write-Host $Message -ForegroundColor Red 
+    if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
+}
 
 function Show-BalloonNotification {
     param(
@@ -563,19 +582,24 @@ function Get-DisplayConfiguration {
             Write-Host ""
         }
         
-        # Interactive selection with 10-second timeout
-        Write-Host "Auto-selecting primary display in 10 seconds if no selection made..." -ForegroundColor Yellow
-        
-        $timeout = 10
-        $selection = $null
-        
-        for ($i = $timeout; $i -gt 0; $i--) {
-            if ([Console]::KeyAvailable) {
-                $selection = Read-Host "`rSelect display for recording (1-$($displays.Count)) or CTRL-C to exit"
-                break
+        # Interactive selection with 10-second timeout (skip in CheckOnly mode)
+        if ($CheckOnly) {
+            Write-Host "CheckOnly mode: Auto-selecting primary display..." -ForegroundColor Yellow
+            $selection = $null  # Will auto-select primary display below
+        } else {
+            Write-Host "Auto-selecting primary display in 10 seconds if no selection made..." -ForegroundColor Yellow
+            
+            $timeout = 10
+            $selection = $null
+            
+            for ($i = $timeout; $i -gt 0; $i--) {
+                if ([Console]::KeyAvailable) {
+                    $selection = Read-Host "`rSelect display for recording (1-$($displays.Count)) or CTRL-C to exit"
+                    break
+                }
+                Write-Host "`rSelect display for recording (1-$($displays.Count)) or CTRL-C to exit (auto-select in $i seconds)" -NoNewline -ForegroundColor Cyan
+                Start-Sleep -Seconds 1
             }
-            Write-Host "`rSelect display for recording (1-$($displays.Count)) or CTRL-C to exit (auto-select in $i seconds)" -NoNewline -ForegroundColor Cyan
-            Start-Sleep -Seconds 1
         }
         
         if (-not $selection) {
@@ -1402,12 +1426,21 @@ try {
     }
 }
 
+# Initialize logging
+$script:LogToFile = $LogToFile
+
+function Write-Header {
+    param([string]$Message, [string]$Color = "Magenta")
+    Write-Host $Message -ForegroundColor $Color
+    if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
+}
+
 # Main execution
 try {
-    Write-Host ""
-    Write-Host "OBS Studio Infrastructure Deployment" -ForegroundColor Magenta
-    Write-Host "=====================================" -ForegroundColor Magenta
-    Write-Host ""
+    Write-Header ""
+    Write-Header "OBS Studio Infrastructure Deployment"
+    Write-Header "====================================="
+    Write-Header ""
     
     # Handle special operations first
     if ($Cleanup) {

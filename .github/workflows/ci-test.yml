@@ -38,8 +38,9 @@ jobs:
         Write-Host "=== Testing CheckOnly Mode ===" -ForegroundColor Yellow
         
         try {
-          # Test CheckOnly mode (should not make any changes)
-          $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 2>&1
+          # Test CheckOnly mode (should not make any changes) - use logging for reliable output capture
+          & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 -PrimaryDisplay -LogToFile "ci-test-output.txt"
+          $result = Get-Content "ci-test-output.txt"
           
           # Verify expected output patterns (ignore non-critical errors)
           $hasSystemAnalysis = $result -match "=== System Configuration Analysis ==="
@@ -74,7 +75,8 @@ jobs:
         } catch {
           Write-Host "- CheckOnly test failed: $($_.Exception.Message)" -ForegroundColor Red
           # Don't exit on non-critical errors if basic functionality works
-          $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 2>&1
+          & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 -PrimaryDisplay -LogToFile "ci-fallback-test.txt"
+          $result = Get-Content "ci-fallback-test.txt"
           if ($result -match "Environment check complete") {
             Write-Host "! Script has non-critical errors but core functionality works" -ForegroundColor Yellow
           } else {
@@ -93,7 +95,8 @@ jobs:
         foreach ($mode in $modes) {
           try {
             Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
-            $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
+            & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode -PrimaryDisplay -LogToFile "ci-perf-test-${mode}.txt"
+            $result = Get-Content "ci-perf-test-${mode}.txt"
             
             # Check for performance mode specific output (mode appears in parentheses with % sign)
             $hasCorrectMode = $result -match "Performance Mode:.*\(${mode}% scaling"
