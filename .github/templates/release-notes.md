@@ -10,7 +10,7 @@
 - **Microsoft Cloud Integration**: OneDrive/SharePoint optimized settings
 - **Enterprise Deployment**: Scheduled tasks, notifications, protection systems
 - **Interactive Setup**: Respects OBS wizard while automating optimization
-- **Thomson Reuters Branding**: Custom input history template with corporate styling
+- **Custom Input History**: Professional input monitoring template with corporate styling
 
 ### Performance Modes
 | Mode | Scaling | Use Case | Command |
@@ -28,7 +28,7 @@
 # Complete setup with plugins and enterprise features
 powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
 
-# Gaming/streaming setup with Thomson Reuters input overlay
+# Gaming/streaming setup with custom input overlay
 powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -EnableNotifications -PerformanceMode 75"
 
 # AI webcam effects for professional content

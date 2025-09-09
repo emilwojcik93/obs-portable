@@ -52,6 +52,7 @@ jobs:
         files: |
           Deploy-OBSStudio.ps1
           README.md
+          .github/templates/custom-input-history.html
         draft: false
         prerelease: false
       env:

@@ -1286,18 +1286,28 @@ function Install-InputOverlayPlugin {
         
         Write-Info "Presets installed to: $InstallPath\data\input-overlay-presets\"
         
-        # Install Thomson Reuters custom input history template in input-history-windows folder
-        $trTemplatePath = Join-Path $PSScriptRoot ".github\templates\thomson-reuters-input-history.html"
-        if (Test-Path $trTemplatePath) {
+        # Install custom input history template in input-history-windows folder
+        try {
             # Create input-history-windows folder
             $inputHistoryPath = "$InstallPath\data\input-overlay-presets\input-history-windows"
             New-Item -Path $inputHistoryPath -ItemType Directory -Force | Out-Null
             
-            $trDestPath = "$inputHistoryPath\thomson-reuters-input-history.html"
-            Copy-Item $trTemplatePath $trDestPath -Force
-            Write-Info "Thomson Reuters template installed to: $inputHistoryPath\"
-            Write-Info "Setup: Tools > input-overlay-settings > WebSocket Server > Enable"
-            Write-Info "Add Browser Source > Local File > $trDestPath"
+            # Download custom input history template from release
+            $templateUrl = "https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/custom-input-history.html"
+            $templateDestPath = "$inputHistoryPath\custom-input-history.html"
+            
+            Write-Info "Downloading custom input history template..."
+            Invoke-WebRequest -Uri $templateUrl -OutFile $templateDestPath -ErrorAction Stop
+            
+            Write-Info "Custom input history template installed to: $inputHistoryPath\"
+            Write-Info "Setup Instructions:"
+            Write-Info "  1. Tools > input-overlay-settings > WebSocket Server > Enable checkbox"
+            Write-Info "  2. Add Browser Source > Local File > Browse to:"
+            Write-Info "     $templateDestPath"
+            Write-Info "  3. Set Width: 280, Height: 400"
+        } catch {
+            Write-Warning "Failed to install custom input history template: $($_.Exception.Message)"
+            Write-Info "Template will be available in next release"
         }
         
         # Cleanup
@@ -2141,10 +2151,10 @@ try {
                         Write-Info "  + Input Overlay: Keyboard/mouse/gamepad visualization"
                         Write-Info "    Presets: $InstallPath\data\input-overlay-presets\"
                         Write-Info ""
-                        Write-Info "  Setup Thomson Reuters Input History:"
+                        Write-Info "  Setup Custom Input History:"
                         Write-Info "    1. Tools > input-overlay-settings > WebSocket Server > Enable checkbox"
                         Write-Info "    2. Add Browser Source > Local File > Browse to:"
-                        Write-Info "       $InstallPath\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html"
+                        Write-Info "       $InstallPath\data\input-overlay-presets\input-history-windows\custom-input-history.html"
                         Write-Info "    3. Set Width: 280, Height: 400"
                     }
                     if ($InstallOpenVINO) {

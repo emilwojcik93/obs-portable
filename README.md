@@ -658,7 +658,7 @@ iwr https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Depl
 
 ## 🔌 Plugin Setup Instructions
 
-### **🎮 Input Overlay Setup (Thomson Reuters Template)**
+### **🎮 Input Overlay Setup (Custom Input History)**
 
 After installing with `-InstallInputOverlay`, follow these steps:
 
@@ -669,14 +669,14 @@ After installing with `-InstallInputOverlay`, follow these steps:
 4. Check **"Forward and receive events through websocket server with address"**
 5. Click **OK**
 
-#### **2. Add Thomson Reuters Input History**
+#### **2. Add Custom Input History**
 1. **Add Source** > **Browser Source**
 2. Check **"Local file"** checkbox
 3. Click **Browse** and navigate to:
    ```
-   [InstallPath]\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html
+   [InstallPath]\data\input-overlay-presets\input-history-windows\custom-input-history.html
    ```
-   *(Default: `C:\Users\[Username]\OBS-Studio-Portable\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html`)*
+   *(Default: `C:\Users\[Username]\OBS-Studio-Portable\data\input-overlay-presets\input-history-windows\custom-input-history.html`)*
 4. Set **Width: 280**, **Height: 400**
 5. Click **OK**
 
@@ -722,7 +722,7 @@ After installing with `-InstallOpenVINO`, follow these steps:
 
 | Parameter | Type | Description | Features |
 |-----------|------|-------------|----------|
-| `-InstallInputOverlay` | Switch | Input visualization plugin | Keyboard/mouse/gamepad overlays, Thomson Reuters template |
+| `-InstallInputOverlay` | Switch | Input visualization plugin | Keyboard/mouse/gamepad overlays, custom input history template |
 | `-InstallOpenVINO` | Switch | Intel AI webcam effects | Background removal, face mesh, smart framing |
 
 ### **Enterprise Parameters**
