@@ -45,7 +45,7 @@ jobs:
           $hasSystemAnalysis = $result -match "=== System Configuration Analysis ==="
           $hasConfigPreview = $result -match "=== Configuration Preview ==="
           $hasEnvironmentCheck = $result -match "Environment check complete"
-          $hasPerformanceMode = $result -match "Performance Mode:"
+          $hasPerformanceMode = $result -match "Performance Mode:.*scaling"
           
           # Check for critical failures (script not executing at all)
           $hasCriticalError = $result -match "Deployment failed|Installation failed|Cannot find path"
@@ -95,8 +95,8 @@ jobs:
             Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
             $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
             
-            # Check for performance mode specific output
-            $hasCorrectMode = $result -match "Performance Mode:.*$mode"
+            # Check for performance mode specific output (mode appears in parentheses with % sign)
+            $hasCorrectMode = $result -match "Performance Mode:.*\(${mode}% scaling"
             
             if ($hasCorrectMode) {
               Write-Host "  + Mode ${mode}: PASS" -ForegroundColor Green

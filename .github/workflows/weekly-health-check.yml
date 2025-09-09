@@ -155,8 +155,8 @@ jobs:
             Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
             $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode 2>&1
             
-            # Check for expected performance mode output
-            $hasPerformanceOutput = $result -match "Performance Mode:.*"
+            # Check for expected performance mode output (mode appears in parentheses with % sign)
+            $hasPerformanceOutput = $result -match "Performance Mode:.*\(${mode}% scaling"
             $hasBitrateOutput = $result -match "Bitrate: \d+ kbps"
             
             if ($hasPerformanceOutput -and $hasBitrateOutput) {
