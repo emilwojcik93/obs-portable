@@ -1,4 +1,4 @@
-name: 🧪 Continuous Integration Test
+name: Continuous Integration Test
 
 on:
   push:
@@ -21,26 +21,26 @@ jobs:
     runs-on: windows-2025
     
     steps:
-    - name: 🔄 Checkout Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: 🧪 Test Script Syntax
+    - name: Test Script Syntax
       shell: pwsh
       run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-script-syntax.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: 🔍 Test CheckOnly Mode
+    - name: Test CheckOnly Mode
       shell: pwsh
       run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
 
-    - name: 🎛️ Test Performance Mode Parameters
+    - name: Test Performance Mode Parameters
       shell: pwsh
       run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: 📋 Test Help Documentation
+    - name: Test Help Documentation
       shell: pwsh
       run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-help-documentation.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: ✅ CI Test Summary
+    - name: CI Test Summary
       shell: pwsh
       run: |
         Write-Host "=== CI Test Summary ===" -ForegroundColor Green

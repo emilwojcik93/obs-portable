@@ -1,4 +1,4 @@
-name: 🔍 Weekly Infrastructure Health Check
+name: Weekly Infrastructure Health Check
 
 on:
   schedule:
@@ -15,10 +15,10 @@ jobs:
     runs-on: windows-2025
     
     steps:
-    - name: 🔄 Checkout Repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: 🔍 Test Script CheckOnly Mode
+    - name: Test Script CheckOnly Mode
       id: script_test
       shell: pwsh
       run: |
