@@ -11,7 +11,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-2025
     permissions:
       contents: write
     
@@ -25,10 +25,11 @@ jobs:
       id: release_notes
       shell: pwsh
       run: |
-        $output = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md" | Out-String
+        # Generate release notes and capture output
+        $scriptOutput = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md"
         
         # Extract version from script output
-        $versionMatch = $output | Select-String -Pattern "VERSION=(.+)"
+        $versionMatch = $scriptOutput | Select-String -Pattern "VERSION=(.+)"
         if ($versionMatch) {
           $version = $versionMatch.Matches[0].Groups[1].Value
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
