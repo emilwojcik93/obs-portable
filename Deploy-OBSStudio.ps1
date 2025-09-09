@@ -1,9 +1,10 @@
 #Requires -Version 5.0
 <#
 .SYNOPSIS
-    OBS Studio Infrastructure as Code Deployment Script
+OBS Studio Infrastructure as Code Deployment Script
+
 .DESCRIPTION
-    Complete IaC solution for OBS Studio portable deployment with:
+Complete IaC solution for OBS Studio portable deployment with:
     - 5-tier performance optimization system (33%, 50%, 60%, 75%, 90% scaling)
     - Advanced hardware detection (real monitor names, GPU classification)
     - Interactive first-time setup with post-configuration automation

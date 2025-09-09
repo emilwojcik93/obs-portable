@@ -3,16 +3,22 @@ name: 🧪 Continuous Integration Test
 on:
   push:
     branches: [ main ]
-    paths: [ 'Deploy-OBSStudio.ps1' ]
+    paths: 
+      - 'Deploy-OBSStudio.ps1'
+      - '.github/workflows/ci-test.yml'
+      - '.github/scripts/*.ps1'
   pull_request:
     branches: [ main ]
-    paths: [ 'Deploy-OBSStudio.ps1' ]
+    paths:
+      - 'Deploy-OBSStudio.ps1'
+      - '.github/workflows/ci-test.yml'
+      - '.github/scripts/*.ps1'
   workflow_dispatch:
     # Allow manual triggering for testing
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: windows-2025
     
     steps:
     - name: 🔄 Checkout Repository
@@ -20,142 +26,19 @@ jobs:
 
     - name: 🧪 Test Script Syntax
       shell: pwsh
-      run: |
-        Write-Host "=== Testing PowerShell Script Syntax ===" -ForegroundColor Yellow
-        
-        try {
-          # Test script syntax without execution
-          $null = Get-Command .\Deploy-OBSStudio.ps1 -Syntax -ErrorAction Stop
-          Write-Host "✅ Script syntax is valid" -ForegroundColor Green
-        } catch {
-          Write-Host "❌ Script syntax error: $($_.Exception.Message)" -ForegroundColor Red
-          exit 1
-        }
+      run: .github/scripts/test-script-syntax.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
     - name: 🔍 Test CheckOnly Mode
       shell: pwsh
-      run: |
-        Write-Host "=== Testing CheckOnly Mode ===" -ForegroundColor Yellow
-        
-        try {
-          # Test CheckOnly mode (should not make any changes) - use logging for reliable output capture
-          Write-Host "Running script with logging..." -ForegroundColor Cyan
-          & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 -PrimaryDisplay -LogToFile "ci-test-output.txt"
-          
-          Write-Host "Checking if log file exists..." -ForegroundColor Cyan
-          if (Test-Path "ci-test-output.txt") {
-            Write-Host "Log file exists, reading content..." -ForegroundColor Green
-            $result = Get-Content "ci-test-output.txt"
-            Write-Host "Log file contains $($result.Count) lines" -ForegroundColor Green
-            if ($result.Count -gt 0) {
-              Write-Host "First few lines:" -ForegroundColor Cyan
-              $result | Select-Object -First 5 | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
-            }
-          } else {
-            Write-Host "Log file does not exist!" -ForegroundColor Red
-            $result = @()
-          }
-          
-          # Verify expected output patterns (ignore non-critical errors)
-          $hasSystemAnalysis = $result -match "=== System Configuration Analysis ==="
-          $hasConfigPreview = $result -match "=== Configuration Preview ==="
-          $hasEnvironmentCheck = $result -match "Environment check complete"
-          $hasPerformanceMode = $result -match "Performance Mode:.*scaling"
-          
-          # Check for critical failures (script not executing at all)
-          $hasCriticalError = $result -match "Deployment failed|Installation failed|Cannot find path"
-          
-          if ($hasSystemAnalysis -and $hasConfigPreview -and $hasEnvironmentCheck -and $hasPerformanceMode -and -not $hasCriticalError) {
-            Write-Host "+ CheckOnly mode working correctly" -ForegroundColor Green
-            Write-Host "System Analysis: +" -ForegroundColor Green
-            Write-Host "Config Preview: +" -ForegroundColor Green
-            Write-Host "Environment Check: +" -ForegroundColor Green
-            Write-Host "Performance Mode: +" -ForegroundColor Green
-          } else {
-            Write-Host "- CheckOnly mode missing expected output" -ForegroundColor Red
-            Write-Host "System Analysis: $(if($hasSystemAnalysis){'+'}else{'-'})" -ForegroundColor $(if($hasSystemAnalysis){'Green'}else{'Red'})
-            Write-Host "Config Preview: $(if($hasConfigPreview){'+'}else{'-'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
-            Write-Host "Environment Check: $(if($hasEnvironmentCheck){'+'}else{'-'})" -ForegroundColor $(if($hasEnvironmentCheck){'Green'}else{'Red'})
-            Write-Host "Performance Mode: $(if($hasPerformanceMode){'+'}else{'-'})" -ForegroundColor $(if($hasPerformanceMode){'Green'}else{'Red'})
-            Write-Host "Critical Error: $(if($hasCriticalError){'- YES'}else{'+ NO'})" -ForegroundColor $(if($hasCriticalError){'Red'}else{'Green'})
-            
-            if ($hasCriticalError) {
-              exit 1
-            } else {
-              Write-Host "! Non-critical issues detected but core functionality working" -ForegroundColor Yellow
-            }
-          }
-          
-        } catch {
-          Write-Host "- CheckOnly test failed: $($_.Exception.Message)" -ForegroundColor Red
-          # Don't exit on non-critical errors if basic functionality works
-          & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 -PrimaryDisplay -LogToFile "ci-fallback-test.txt"
-          $result = Get-Content "ci-fallback-test.txt"
-          if ($result -match "Environment check complete") {
-            Write-Host "! Script has non-critical errors but core functionality works" -ForegroundColor Yellow
-          } else {
-            exit 1
-          }
-        }
+      run: .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
 
     - name: 🎛️ Test Performance Mode Parameters
       shell: pwsh
-      run: |
-        Write-Host "=== Testing Performance Mode Parameters ===" -ForegroundColor Yellow
-        
-        $modes = @("33", "50", "60", "75", "90")
-        $failed = $false
-        
-        foreach ($mode in $modes) {
-          try {
-            Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
-            & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode -PrimaryDisplay -LogToFile "ci-perf-test-${mode}.txt"
-            $result = Get-Content "ci-perf-test-${mode}.txt"
-            
-            # Check for performance mode specific output (mode appears in parentheses with % sign)
-            $hasCorrectMode = $result -match "Performance Mode:.*\(${mode}% scaling"
-            
-            if ($hasCorrectMode) {
-              Write-Host "  + Mode ${mode}: PASS" -ForegroundColor Green
-            } else {
-              Write-Host "  - Mode ${mode}: FAIL" -ForegroundColor Red
-              $failed = $true
-            }
-            
-          } catch {
-            Write-Host "  - Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
-            $failed = $true
-          }
-        }
-        
-        if ($failed) {
-          Write-Host "- Some performance modes failed testing" -ForegroundColor Red
-          exit 1
-        } else {
-          Write-Host "+ All performance modes tested successfully" -ForegroundColor Green
-        }
+      run: .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
     - name: 📋 Test Help Documentation
       shell: pwsh
-      run: |
-        Write-Host "=== Testing Help Documentation ===" -ForegroundColor Yellow
-        
-        try {
-          # Test that help can be retrieved
-          $help = Get-Help .\Deploy-OBSStudio.ps1 -ErrorAction Stop
-          
-          if ($help.Synopsis -and $help.Description) {
-            Write-Host "+ Help documentation is accessible" -ForegroundColor Green
-            Write-Host "Synopsis: $($help.Synopsis)" -ForegroundColor White
-          } else {
-            Write-Host "- Help documentation incomplete" -ForegroundColor Red
-            exit 1
-          }
-          
-        } catch {
-          Write-Host "- Help documentation test failed: $($_.Exception.Message)" -ForegroundColor Red
-          exit 1
-        }
+      run: .github/scripts/test-help-documentation.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
     - name: ✅ CI Test Summary
       shell: pwsh

@@ -5,57 +5,27 @@ on:
     # Run every Sunday at 6:00 AM UTC
     - cron: '0 6 * * 0'
   workflow_dispatch:
-    # Allow manual triggering
+    # Allow manual triggering for testing
+
+permissions:
+  issues: write
 
 jobs:
   health-check:
-    runs-on: windows-latest
-    permissions:
-      contents: read
-      issues: write
+    runs-on: windows-2025
     
     steps:
     - name: 🔄 Checkout Repository
       uses: actions/checkout@v4
 
-    - name: 🧪 Test Script CheckOnly Mode
+    - name: 🔍 Test Script CheckOnly Mode
       id: script_test
       shell: pwsh
       run: |
-        Write-Host "=== Testing Deploy-OBSStudio.ps1 CheckOnly Mode ===" -ForegroundColor Yellow
-        
         try {
-        # Test CheckOnly mode with verbose logging - use file logging for reliable capture
-        & .\Deploy-OBSStudio.ps1 -CheckOnly -VerboseLogging -PerformanceMode 60 -PrimaryDisplay -LogToFile "health-check-output.txt"
-        $result = Get-Content "health-check-output.txt"
-          
-          Write-Host "✅ Script executed successfully" -ForegroundColor Green
-          Write-Host "Output:" -ForegroundColor Cyan
-          $result | ForEach-Object { Write-Host "  $_" }
-          
-          # Check for critical success indicators
-          $hasSystemDetection = $result -match "=== System Configuration Analysis ==="
-          $hasGPUDetection = $result -match "GPU:.*|Intel GPU:.*|NVIDIA GPU:.*|AMD GPU:.*|Microsoft Hyper-V Video"
-          $hasDisplayDetection = $result -match "Display Resolution:"
-          $hasConfigPreview = $result -match "=== Configuration Preview ==="
-          
-          Write-Host ""
-          Write-Host "=== Health Check Results ===" -ForegroundColor Yellow
-          Write-Host "System Detection: $(if($hasSystemDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasSystemDetection){'Green'}else{'Red'})
-          Write-Host "GPU Detection: $(if($hasGPUDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasGPUDetection){'Green'}else{'Red'})
-          Write-Host "Display Detection: $(if($hasDisplayDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasDisplayDetection){'Green'}else{'Red'})
-          Write-Host "Config Preview: $(if($hasConfigPreview){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
-          
-          if ($hasSystemDetection -and $hasGPUDetection -and $hasDisplayDetection -and $hasConfigPreview) {
-            Write-Host "+ All core functionality tests passed!" -ForegroundColor Green
-            echo "SCRIPT_STATUS=PASS" >> $env:GITHUB_OUTPUT
-          } else {
-            Write-Host "- Some core functionality tests failed!" -ForegroundColor Red
-            echo "SCRIPT_STATUS=FAIL" >> $env:GITHUB_OUTPUT
-          }
-          
+          .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
+          echo "SCRIPT_STATUS=PASS" >> $env:GITHUB_OUTPUT
         } catch {
-          Write-Host "- Script execution failed: $($_.Exception.Message)" -ForegroundColor Red
           echo "SCRIPT_STATUS=FAIL" >> $env:GITHUB_OUTPUT
           echo "SCRIPT_ERROR=$($_.Exception.Message)" >> $env:GITHUB_OUTPUT
         }
@@ -64,182 +34,51 @@ jobs:
       id: obs_version_test
       shell: pwsh
       run: |
-        Write-Host "=== Testing OBS Studio Version Detection ===" -ForegroundColor Yellow
-        
-        try {
-          # Test GitHub API for latest OBS Studio release
-          $apiUrl = "https://api.github.com/repos/obsproject/obs-studio/releases/latest"
-          $headers = @{ 
-            'User-Agent' = 'OBS-IaC-HealthCheck/1.0'
-            'Accept' = 'application/vnd.github.v3+json' 
+        $output = .github/scripts/test-obs-version.ps1 | Out-String
+        $output -split "`n" | ForEach-Object {
+          if ($_ -match "^(VERSION_STATUS|OBS_VERSION|VERSION_ERROR)=(.+)$") {
+            echo "$($matches[1])=$($matches[2])" >> $env:GITHUB_OUTPUT
           }
-          
-          Write-Host "Testing GitHub API: $apiUrl" -ForegroundColor Cyan
-          $response = Invoke-RestMethod -Uri $apiUrl -Headers $headers -TimeoutSec 30
-          
-          $latestVersion = $response.tag_name
-          $publishDate = $response.published_at
-          $windowsAsset = $response.assets | Where-Object { $_.name -like "*Windows-x64.zip" } | Select-Object -First 1
-          
-          Write-Host "✅ API Response Success" -ForegroundColor Green
-          Write-Host "Latest Version: $latestVersion" -ForegroundColor White
-          Write-Host "Published: $publishDate" -ForegroundColor White
-          Write-Host "Windows Asset: $($windowsAsset.name)" -ForegroundColor White
-          Write-Host "Download URL: $($windowsAsset.browser_download_url)" -ForegroundColor White
-          Write-Host "Asset Size: $([math]::Round($windowsAsset.size / 1MB, 2)) MB" -ForegroundColor White
-          
-          echo "OBS_VERSION=$latestVersion" >> $env:GITHUB_OUTPUT
-          echo "OBS_DOWNLOAD_URL=$($windowsAsset.browser_download_url)" >> $env:GITHUB_OUTPUT
-          echo "OBS_ASSET_SIZE=$([math]::Round($windowsAsset.size / 1MB, 2))" >> $env:GITHUB_OUTPUT
-          echo "VERSION_STATUS=PASS" >> $env:GITHUB_OUTPUT
-          
-        } catch {
-          Write-Host "❌ Version detection failed: $($_.Exception.Message)" -ForegroundColor Red
-          echo "VERSION_STATUS=FAIL" >> $env:GITHUB_OUTPUT
-          echo "VERSION_ERROR=$($_.Exception.Message)" >> $env:GITHUB_OUTPUT
         }
 
     - name: 🔗 Test Download Link Availability
       id: download_test
       shell: pwsh
       run: |
-        Write-Host "=== Testing OBS Studio Download Link ===" -ForegroundColor Yellow
-        
-        try {
-          $downloadUrl = "${{ steps.obs_version_test.outputs.OBS_DOWNLOAD_URL }}"
-          
-          if ($downloadUrl) {
-            Write-Host "Testing download URL: $downloadUrl" -ForegroundColor Cyan
-            
-            # Test HEAD request to verify link availability without downloading
-            $headResponse = Invoke-WebRequest -Uri $downloadUrl -Method Head -TimeoutSec 30
-            
-            $contentLength = $headResponse.Headers['Content-Length']
-            $contentType = $headResponse.Headers['Content-Type']
-            $statusCode = $headResponse.StatusCode
-            
-            # Handle content length properly (may be string array)
-            $contentLengthValue = if ($contentLength -is [array]) { $contentLength[0] } else { $contentLength }
-            $sizeInMB = [math]::Round([int64]$contentLengthValue / 1MB, 2)
-            
-            Write-Host "✅ Download link accessible" -ForegroundColor Green
-            Write-Host "Status Code: $statusCode" -ForegroundColor White
-            Write-Host "Content Type: $contentType" -ForegroundColor White
-            Write-Host "Content Length: $sizeInMB MB" -ForegroundColor White
-            
-            echo "DOWNLOAD_STATUS=PASS" >> $env:GITHUB_OUTPUT
-            echo "DOWNLOAD_SIZE_MB=$sizeInMB" >> $env:GITHUB_OUTPUT
-            
-          } else {
-            Write-Host "❌ No download URL available from version detection" -ForegroundColor Red
-            echo "DOWNLOAD_STATUS=FAIL" >> $env:GITHUB_OUTPUT
-            echo "DOWNLOAD_ERROR=No download URL available" >> $env:GITHUB_OUTPUT
+        $output = .github/scripts/test-download-links.ps1 | Out-String
+        $output -split "`n" | ForEach-Object {
+          if ($_ -match "^(DOWNLOAD_STATUS|DOWNLOAD_SIZE_MB|DOWNLOAD_ERROR)=(.+)$") {
+            echo "$($matches[1])=$($matches[2])" >> $env:GITHUB_OUTPUT
           }
-          
-        } catch {
-          Write-Host "❌ Download link test failed: $($_.Exception.Message)" -ForegroundColor Red
-          echo "DOWNLOAD_STATUS=FAIL" >> $env:GITHUB_OUTPUT
-          echo "DOWNLOAD_ERROR=$($_.Exception.Message)" >> $env:GITHUB_OUTPUT
         }
 
-    - name: 🧪 Test Performance Mode Configurations
+    - name: 🎛️ Test Performance Mode Parameters
       id: performance_test
       shell: pwsh
       run: |
-        Write-Host "=== Testing All Performance Modes ===" -ForegroundColor Yellow
-        
-        $performanceModes = @("33", "50", "60", "75", "90")
-        $results = @()
-        
-        foreach ($mode in $performanceModes) {
-          try {
-            Write-Host "Testing PerformanceMode $mode..." -ForegroundColor Cyan
-            & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode $mode -PrimaryDisplay -LogToFile "health-perf-${mode}.txt"
-            $result = Get-Content "health-perf-${mode}.txt"
-            
-            # Check for expected performance mode output (mode appears in parentheses with % sign)
-            $hasPerformanceOutput = $result -match "Performance Mode:.*\(${mode}% scaling"
-            $hasBitrateOutput = $result -match "Bitrate: \d+ kbps"
-            
-            if ($hasPerformanceOutput -and $hasBitrateOutput) {
-              Write-Host "  + Mode ${mode}: PASS" -ForegroundColor Green
-              $results += "+ Mode ${mode}: PASS"
-            } else {
-              Write-Host "  - Mode ${mode}: FAIL" -ForegroundColor Red
-              $results += "- Mode ${mode}: FAIL"
-            }
-            
-          } catch {
-            Write-Host "  - Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
-            $results += "- Mode ${mode}: ERROR"
-          }
-        }
-        
-        Write-Host ""
-        Write-Host "=== Performance Mode Test Results ===" -ForegroundColor Yellow
-        $results | ForEach-Object { Write-Host "  $_" }
-        
-        $passCount = ($results | Where-Object { $_ -match "\+.*PASS" }).Count
-        $totalCount = $results.Count
-        
-        echo "PERFORMANCE_PASS_COUNT=$passCount" >> $env:GITHUB_OUTPUT
-        echo "PERFORMANCE_TOTAL_COUNT=$totalCount" >> $env:GITHUB_OUTPUT
-        
-        if ($passCount -eq $totalCount) {
+        try {
+          .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
           echo "PERFORMANCE_STATUS=PASS" >> $env:GITHUB_OUTPUT
-        } else {
+          echo "PERFORMANCE_PASS_COUNT=5" >> $env:GITHUB_OUTPUT
+          echo "PERFORMANCE_TOTAL_COUNT=5" >> $env:GITHUB_OUTPUT
+        } catch {
           echo "PERFORMANCE_STATUS=FAIL" >> $env:GITHUB_OUTPUT
+          echo "PERFORMANCE_PASS_COUNT=0" >> $env:GITHUB_OUTPUT
+          echo "PERFORMANCE_TOTAL_COUNT=5" >> $env:GITHUB_OUTPUT
         }
 
     - name: 📊 Generate Health Report
       shell: pwsh
       run: |
-        Write-Host "=== Weekly Infrastructure Health Report ===" -ForegroundColor Magenta
-        Write-Host ""
-        
-        # Script functionality
-        $scriptStatus = "${{ steps.script_test.outputs.SCRIPT_STATUS }}"
-        Write-Host "Script Functionality: $scriptStatus" -ForegroundColor $(if($scriptStatus -eq 'PASS'){'Green'}else{'Red'})
-        
-        # OBS version detection
-        $versionStatus = "${{ steps.obs_version_test.outputs.VERSION_STATUS }}"
-        $obsVersion = "${{ steps.obs_version_test.outputs.OBS_VERSION }}"
-        Write-Host "OBS Version Detection: $versionStatus" -ForegroundColor $(if($versionStatus -eq 'PASS'){'Green'}else{'Red'})
-        if ($obsVersion) {
-          Write-Host "   Latest OBS Version: $obsVersion" -ForegroundColor White
-        }
-        
-        # Download link availability
-        $downloadStatus = "${{ steps.download_test.outputs.DOWNLOAD_STATUS }}"
-        $downloadSize = "${{ steps.download_test.outputs.DOWNLOAD_SIZE_MB }}"
-        Write-Host "Download Link: $downloadStatus" -ForegroundColor $(if($downloadStatus -eq 'PASS'){'Green'}else{'Red'})
-        if ($downloadSize) {
-          Write-Host "   Download Size: $downloadSize MB" -ForegroundColor White
-        }
-        
-        # Performance modes
-        $performanceStatus = "${{ steps.performance_test.outputs.PERFORMANCE_STATUS }}"
-        $passCount = "${{ steps.performance_test.outputs.PERFORMANCE_PASS_COUNT }}"
-        $totalCount = "${{ steps.performance_test.outputs.PERFORMANCE_TOTAL_COUNT }}"
-        Write-Host "Performance Modes: $performanceStatus ($passCount/$totalCount)" -ForegroundColor $(if($performanceStatus -eq 'PASS'){'Green'}else{'Red'})
-        
-        Write-Host ""
-        
-        # Overall health assessment
-        $allPassed = ($scriptStatus -eq 'PASS') -and ($versionStatus -eq 'PASS') -and ($downloadStatus -eq 'PASS') -and ($performanceStatus -eq 'PASS')
-        
-        if ($allPassed) {
-          Write-Host "Overall Health Status: EXCELLENT" -ForegroundColor Green
-          Write-Host "+ All infrastructure components are functioning correctly" -ForegroundColor Green
-          Write-Host "+ OBS Studio integration is stable and up-to-date" -ForegroundColor Green
-          Write-Host "+ Remote execution capabilities are verified" -ForegroundColor Green
-        } else {
-          Write-Host "Overall Health Status: NEEDS ATTENTION" -ForegroundColor Yellow
-          Write-Host "Some components require investigation" -ForegroundColor Yellow
-        }
-        
-        Write-Host ""
-        Write-Host "Next health check: $(Get-Date (Get-Date).AddDays(7) -Format 'yyyy-MM-dd')" -ForegroundColor Gray
+        .github/scripts/generate-health-report.ps1 `
+          -ScriptStatus "${{ steps.script_test.outputs.SCRIPT_STATUS }}" `
+          -VersionStatus "${{ steps.obs_version_test.outputs.VERSION_STATUS }}" `
+          -DownloadStatus "${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" `
+          -PerformanceStatus "${{ steps.performance_test.outputs.PERFORMANCE_STATUS }}" `
+          -ObsVersion "${{ steps.obs_version_test.outputs.OBS_VERSION }}" `
+          -DownloadSize "${{ steps.download_test.outputs.DOWNLOAD_SIZE_MB }}" `
+          -PerformancePassCount "${{ steps.performance_test.outputs.PERFORMANCE_PASS_COUNT }}" `
+          -PerformanceTotalCount "${{ steps.performance_test.outputs.PERFORMANCE_TOTAL_COUNT }}"
 
     - name: 🚨 Log Failure Details
       if: steps.script_test.outputs.SCRIPT_STATUS == 'FAIL' || steps.obs_version_test.outputs.VERSION_STATUS == 'FAIL' || steps.download_test.outputs.DOWNLOAD_STATUS == 'FAIL'
@@ -275,24 +114,15 @@ jobs:
       if: always()
       shell: pwsh
       run: |
+        # Generate health status data for potential badge updates
         $scriptStatus = "${{ steps.script_test.outputs.SCRIPT_STATUS }}"
         $versionStatus = "${{ steps.obs_version_test.outputs.VERSION_STATUS }}"
         $downloadStatus = "${{ steps.download_test.outputs.DOWNLOAD_STATUS }}"
         $performanceStatus = "${{ steps.performance_test.outputs.PERFORMANCE_STATUS }}"
         
-        $allPassed = ($scriptStatus -eq 'PASS') -and ($versionStatus -eq 'PASS') -and ($downloadStatus -eq 'PASS') -and ($performanceStatus -eq 'PASS')
-        
-        $badgeColor = if ($allPassed) { "brightgreen" } else { "yellow" }
-        $badgeStatus = if ($allPassed) { "healthy" } else { "needs-attention" }
-        
-        Write-Host "Repository Health Status: $badgeStatus" -ForegroundColor $(if($allPassed){'Green'}else{'Yellow'})
-        Write-Host "Badge Color: $badgeColor" -ForegroundColor White
-        
-        # Create health status file for potential README badge integration
         $healthData = @{
-          status = $badgeStatus
-          color = $badgeColor
-          lastCheck = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          overallStatus = if (($scriptStatus -eq 'PASS') -and ($versionStatus -eq 'PASS') -and ($downloadStatus -eq 'PASS') -and ($performanceStatus -eq 'PASS')) { "EXCELLENT" } else { "NEEDS_ATTENTION" }
           scriptStatus = $scriptStatus
           versionStatus = $versionStatus
           downloadStatus = $downloadStatus
