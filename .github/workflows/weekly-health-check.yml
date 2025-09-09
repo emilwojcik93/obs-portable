@@ -30,10 +30,10 @@ jobs:
           $result | ForEach-Object { Write-Host "  $_" }
           
           # Check for critical success indicators
-          $hasSystemDetection = $result -match "System Configuration Analysis"
-          $hasGPUDetection = $result -match "GPU:|Intel GPU:|NVIDIA GPU:|AMD GPU:"
-          $hasDisplayDetection = $result -match "Display Resolution:"
-          $hasConfigPreview = $result -match "Configuration Preview"
+          $hasSystemDetection = $result -match "=== System Configuration Analysis ==="
+          $hasGPUDetection = $result -match "GPU:.*|Intel GPU:.*|NVIDIA GPU:.*|AMD GPU:.*"
+          $hasDisplayDetection = $result -match "Display Resolution:.*"
+          $hasConfigPreview = $result -match "=== Configuration Preview ==="
           
           Write-Host ""
           Write-Host "=== Health Check Results ===" -ForegroundColor Yellow
@@ -114,13 +114,17 @@ jobs:
             $contentType = $headResponse.Headers['Content-Type']
             $statusCode = $headResponse.StatusCode
             
+            # Handle content length properly (may be string array)
+            $contentLengthValue = if ($contentLength -is [array]) { $contentLength[0] } else { $contentLength }
+            $sizeInMB = [math]::Round([int64]$contentLengthValue / 1MB, 2)
+            
             Write-Host "✅ Download link accessible" -ForegroundColor Green
             Write-Host "Status Code: $statusCode" -ForegroundColor White
             Write-Host "Content Type: $contentType" -ForegroundColor White
-            Write-Host "Content Length: $([math]::Round([int64]$contentLength / 1MB, 2)) MB" -ForegroundColor White
+            Write-Host "Content Length: $sizeInMB MB" -ForegroundColor White
             
             echo "DOWNLOAD_STATUS=PASS" >> $env:GITHUB_OUTPUT
-            echo "DOWNLOAD_SIZE_MB=$([math]::Round([int64]$contentLength / 1MB, 2))" >> $env:GITHUB_OUTPUT
+            echo "DOWNLOAD_SIZE_MB=$sizeInMB" >> $env:GITHUB_OUTPUT
             
           } else {
             Write-Host "❌ No download URL available from version detection" -ForegroundColor Red
@@ -153,16 +157,16 @@ jobs:
             $hasBitrateOutput = $result -match "Bitrate:.*\d+ kbps"
             
             if ($hasPerformanceOutput -and $hasBitrateOutput) {
-              Write-Host "  ✅ Mode $mode: PASS" -ForegroundColor Green
-              $results += "✅ Mode $mode: PASS"
+              Write-Host "  ✅ Mode ${mode}: PASS" -ForegroundColor Green
+              $results += "✅ Mode ${mode}: PASS"
             } else {
-              Write-Host "  ❌ Mode $mode: FAIL" -ForegroundColor Red
-              $results += "❌ Mode $mode: FAIL"
+              Write-Host "  ❌ Mode ${mode}: FAIL" -ForegroundColor Red
+              $results += "❌ Mode ${mode}: FAIL"
             }
             
           } catch {
-            Write-Host "  ❌ Mode $mode: ERROR - $($_.Exception.Message)" -ForegroundColor Red
-            $results += "❌ Mode $mode: ERROR"
+            Write-Host "  ❌ Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
+            $results += "❌ Mode ${mode}: ERROR"
           }
         }
         
