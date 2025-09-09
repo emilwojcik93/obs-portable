@@ -56,7 +56,7 @@
     Complete enterprise deployment with auto-recording service
 .NOTES
     Author: OBS IaC Team
-    Version: 2.0 - Unified Performance System
+    Version: 2.0 - Unified Performance System (Workflow Tested)
     Requires: PowerShell 5.0+, Windows 10/11
     GitHub: https://github.com/[username]/obs_studio-portable
 #>
