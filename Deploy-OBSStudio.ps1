@@ -550,16 +550,16 @@ function Get-DisplayConfiguration {
             Write-Host ""
         }
         
-        foreach ($display in $displays) {
-            $primaryText = if ($display.Primary) { " (Primary)" } else { "" }
-            $positionText = "Position: ($($display.X), $($display.Y))"
-            $sizeText = if ($display.PhysicalSize) { ", Size: $($display.PhysicalSize)" } else { "" }
+        foreach ($displayItem in $displays) {
+            $primaryText = if ($displayItem.Primary) { " (Primary)" } else { "" }
+            $positionText = "Position: ($($displayItem.X), $($displayItem.Y))"
+            $sizeText = if ($displayItem.PhysicalSize) { ", Size: $($displayItem.PhysicalSize)" } else { "" }
             
-            Write-Host "$($display.Index). $($display.Name)$primaryText" -ForegroundColor Green
-            Write-Host "   Resolution: $($display.Width)x$($display.Height)" -ForegroundColor White
+            Write-Host "$($displayItem.Index). $($displayItem.Name)$primaryText" -ForegroundColor Green
+            Write-Host "   Resolution: $($displayItem.Width)x$($displayItem.Height)" -ForegroundColor White
             Write-Host "   $positionText$sizeText" -ForegroundColor Gray
-            Write-Host "   Manufacturer: $($display.Manufacturer) ($($display.ManufacturerCode))" -ForegroundColor Gray
-            Write-Host "   Serial: $($display.SerialNumber), Device: $($display.DeviceName)" -ForegroundColor Gray
+            Write-Host "   Manufacturer: $($displayItem.Manufacturer) ($($displayItem.ManufacturerCode))" -ForegroundColor Gray
+            Write-Host "   Serial: $($displayItem.SerialNumber), Device: $($displayItem.DeviceName)" -ForegroundColor Gray
             Write-Host ""
         }
         
