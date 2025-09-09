@@ -43,6 +43,10 @@ Complete IaC solution for OBS Studio portable deployment with:
     Use external display for recording (requires dual display setup)
 .PARAMETER CustomDisplay
     Use custom resolution for recording (format: 1920x1080)
+.PARAMETER InstallInputOverlay
+    Install Input Overlay plugin with presets for keyboard/mouse/gamepad visualization
+.PARAMETER InstallOpenVINO
+    Install OpenVINO plugins for Intel hardware acceleration (webcam effects)
 .EXAMPLE
     .\Deploy-OBSStudio.ps1 -Force
     Default deployment with 60% scaling (lightweight performance)
@@ -55,6 +59,9 @@ Complete IaC solution for OBS Studio portable deployment with:
 .EXAMPLE
     .\Deploy-OBSStudio.ps1 -Force -InstallScheduledTasks -EnableNotifications
     Complete enterprise deployment with auto-recording service
+.EXAMPLE
+    .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -InstallOpenVINO
+    Install OBS Studio with Input Overlay and OpenVINO plugins for enhanced functionality
 .NOTES
     Author: OBS IaC Team
     Version: 2.0 - Unified Performance System
@@ -107,7 +114,13 @@ param(
     
     [Parameter(HelpMessage="Use custom resolution for recording (format: 1920x1080)")]
     [ValidatePattern('^\d+x\d+$')]
-    [string]$CustomDisplay
+    [string]$CustomDisplay,
+    
+    [Parameter(HelpMessage="Install Input Overlay plugin with presets")]
+    [switch]$InstallInputOverlay,
+    
+    [Parameter(HelpMessage="Install OpenVINO plugins for Intel hardware acceleration (webcam effects)")]
+    [switch]$InstallOpenVINO
 )
 
 $ErrorActionPreference = "Stop"
@@ -965,10 +978,218 @@ function Install-OBSStudio {
         Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
         
         Write-Success "OBS Studio installed successfully"
+        Write-Info "Installation Path: $InstallPath"
+        Write-Info "Executable: $InstallPath\bin\64bit\obs64.exe"
         return $true
         
     } catch {
         Write-Error "Installation failed: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Test-IntelCPUCompatibility {
+    <#
+    .SYNOPSIS
+    Tests if the Intel CPU is compatible with OpenVINO
+    
+    .DESCRIPTION
+    Checks if the Intel CPU generation is supported by OpenVINO plugins
+    Supported: Intel Core 6th-14th generation, Xeon 1st-5th gen Scalable, Atom with SSE4.2
+    #>
+    
+    try {
+        $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -First 1
+        $cpuName = $cpu.Name
+        
+        # Intel Core Ultra series (14th gen)
+        if ($cpuName -match "Intel.*Core.*Ultra") {
+            return $true
+        }
+        
+        # Intel Core i-series (check generation)
+        if ($cpuName -match "Intel.*Core.*i[3579]-(\d+)") {
+            $generation = [int]($matches[1] -replace '\D.*$')
+            if ($generation -ge 6000) {  # 6th gen and newer
+                return $true
+            }
+        }
+        
+        # Intel Xeon processors
+        if ($cpuName -match "Intel.*Xeon") {
+            return $true  # Most Xeon processors support OpenVINO
+        }
+        
+        # Intel Atom with SSE4.2 (assume modern Atom processors have it)
+        if ($cpuName -match "Intel.*Atom") {
+            return $true
+        }
+        
+        return $false
+        
+    } catch {
+        Write-Warning "Could not determine CPU compatibility: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Install-VCRedist {
+    <#
+    .SYNOPSIS
+    Installs Visual C++ Redistributable AIO for plugin dependencies
+    #>
+    
+    Write-Info "Installing Visual C++ Redistributable (required for plugins)..."
+    
+    try {
+        # Download VCRedist AIO from GitHub
+        $vcRedistUrl = "https://github.com/abbodi1406/vcredist/releases/latest/download/VisualCppRedist_AIO_x86_x64.exe"
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $vcRedistPath = "${env:TEMP}\VisualCppRedist_AIO_${timestamp}.exe"
+        
+        Write-Info "Downloading VCRedist AIO..."
+        Invoke-WebRequest -Uri $vcRedistUrl -OutFile $vcRedistPath -ErrorAction Stop
+        
+        Write-Info "Installing VCRedist silently..."
+        # Try to install VCRedist - may require admin rights
+        try {
+            Start-Process -FilePath $vcRedistPath -ArgumentList "/ai" -Wait -NoNewWindow -ErrorAction Stop
+        } catch {
+            Write-Warning "VCRedist installation requires administrator rights"
+            Write-Info "VCRedist installer downloaded to: $vcRedistPath"
+            Write-Info "Please run manually with admin rights if plugins don't work"
+            return $false
+        }
+        
+        Remove-Item $vcRedistPath -Force -ErrorAction SilentlyContinue
+        Write-Success "VCRedist installed successfully"
+        return $true
+        
+    } catch {
+        Write-Error "VCRedist installation failed: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Install-InputOverlayPlugin {
+    <#
+    .SYNOPSIS
+    Installs Input Overlay plugin with presets
+    #>
+    
+    param([string]$InstallPath)
+    
+    Write-Info "Installing Input Overlay plugin..."
+    
+    try {
+        # Get latest Input Overlay release from GitHub API
+        $apiUrl = "https://api.github.com/repos/univrsal/input-overlay/releases/latest"
+        $response = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
+        
+        # Find Windows x64 asset
+        $windowsAsset = $response.assets | Where-Object { $_.name -like "*windows-x64.zip" } | Select-Object -First 1
+        if (-not $windowsAsset) {
+            throw "No Windows x64 asset found in latest release"
+        }
+        
+        $pluginUrl = $windowsAsset.browser_download_url
+        $presetsUrl = "https://github.com/univrsal/input-overlay/releases/download/5.0.6/input-overlay-5.0.6-presets.zip"
+        
+        Write-Info "Found Input Overlay version: $($response.tag_name)"
+        
+        $pluginZip = "${env:TEMP}\input-overlay-plugin.zip"
+        $presetsZip = "${env:TEMP}\input-overlay-presets.zip"
+        $pluginExtract = "${env:TEMP}\input-overlay-plugin"
+        $presetsExtract = "${env:TEMP}\input-overlay-presets"
+        
+        Write-Info "Downloading Input Overlay plugin..."
+        Invoke-WebRequest -Uri $pluginUrl -OutFile $pluginZip -ErrorAction Stop
+        
+        Write-Info "Downloading Input Overlay presets..."
+        Invoke-WebRequest -Uri $presetsUrl -OutFile $presetsZip -ErrorAction Stop
+        
+        Write-Info "Extracting plugin files..."
+        Expand-Archive $pluginZip $pluginExtract -Force
+        Expand-Archive $presetsZip $presetsExtract -Force
+        
+        # Install plugin DLLs
+        $pluginDllPath = "$pluginExtract\obs-plugins\64bit"
+        if (Test-Path $pluginDllPath) {
+            Copy-Item "$pluginDllPath\*" "$InstallPath\obs-plugins\64bit\" -Force
+            Write-Info "Plugin DLLs installed"
+        }
+        
+        # Install plugin data
+        $pluginDataPath = "$pluginExtract\data"
+        if (Test-Path $pluginDataPath) {
+            Copy-Item "$pluginDataPath\*" "$InstallPath\data\" -Recurse -Force
+            Write-Info "Plugin data installed"
+        }
+        
+        # Install presets
+        New-Item -Path "$InstallPath\data\input-overlay-presets" -ItemType Directory -Force | Out-Null
+        Copy-Item "$presetsExtract\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+        Write-Info "Presets installed to: $InstallPath\data\input-overlay-presets\"
+        
+        # Cleanup
+        Remove-Item $pluginZip, $presetsZip -Force -ErrorAction SilentlyContinue
+        Remove-Item $pluginExtract, $presetsExtract -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Success "Input Overlay plugin installed successfully"
+        return $true
+        
+    } catch {
+        Write-Error "Input Overlay installation failed: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Install-OpenVINOPlugin {
+    <#
+    .SYNOPSIS
+    Installs OpenVINO plugins for Intel hardware acceleration
+    #>
+    
+    param([string]$InstallPath)
+    
+    Write-Info "Installing OpenVINO plugins for Intel hardware acceleration..."
+    
+    try {
+        # Download OpenVINO OBS plugins
+        $openvinoUrl = "https://github.com/intel/openvino-plugins-for-obs-studio/releases/latest/download/openvino_obs_plugins_v1.1.zip"
+        $openvinoZip = "${env:TEMP}\openvino-obs-plugins.zip"
+        $openvinoExtract = "${env:TEMP}\openvino-obs-plugins"
+        
+        Write-Info "Downloading OpenVINO OBS plugins..."
+        Invoke-WebRequest -Uri $openvinoUrl -OutFile $openvinoZip -ErrorAction Stop
+        
+        Write-Info "Extracting OpenVINO files..."
+        Expand-Archive $openvinoZip $openvinoExtract -Force
+        
+        # Install plugin DLLs
+        $pluginDllPath = "$openvinoExtract\obs-plugins\64bit"
+        if (Test-Path $pluginDllPath) {
+            Copy-Item "$pluginDllPath\*" "$InstallPath\obs-plugins\64bit\" -Force
+            Write-Info "OpenVINO plugin DLLs installed"
+        }
+        
+        # Install plugin data (models and configs)
+        $pluginDataPath = "$openvinoExtract\data"
+        if (Test-Path $pluginDataPath) {
+            Copy-Item "$pluginDataPath\*" "$InstallPath\data\" -Recurse -Force
+            Write-Info "OpenVINO models and data installed"
+        }
+        
+        # Cleanup
+        Remove-Item $openvinoZip -Force -ErrorAction SilentlyContinue
+        Remove-Item $openvinoExtract -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Success "OpenVINO plugins installed successfully"
+        Write-Info "Available filters: Background Concealment, Face Mesh, Smart Framing"
+        return $true
+        
+    } catch {
+        Write-Error "OpenVINO installation failed: $($_.Exception.Message)"
         return $false
     }
 }
@@ -1656,6 +1877,48 @@ try {
     $installSuccess = Install-OBSStudio -SystemConfig $systemConfig
     
     if ($installSuccess) {
+        # Step 2.5: Install plugins if requested
+        $pluginInstallSuccess = $true
+        
+        # Install VCRedist if any plugins are requested
+        if ($InstallInputOverlay -or $InstallOpenVINO) {
+            Write-Info ""
+            Write-Info "=== Installing Plugin Dependencies ==="
+            $vcRedistSuccess = Install-VCRedist
+            if (-not $vcRedistSuccess) {
+                Write-Warning "VCRedist installation failed - plugins may not work properly"
+            }
+        }
+        
+        # Install Input Overlay plugin
+        if ($InstallInputOverlay) {
+            Write-Info ""
+            Write-Info "=== Installing Input Overlay Plugin ==="
+            $inputOverlaySuccess = Install-InputOverlayPlugin -InstallPath $InstallPath
+            if (-not $inputOverlaySuccess) {
+                $pluginInstallSuccess = $false
+            }
+        }
+        
+        # Install OpenVINO plugin for Intel CPUs
+        if ($InstallOpenVINO) {
+            Write-Info ""
+            Write-Info "=== Installing OpenVINO Plugins ==="
+            
+            # Check CPU compatibility
+            $isIntelCompatible = Test-IntelCPUCompatibility
+            if ($isIntelCompatible) {
+                Write-Info "Intel CPU detected and compatible with OpenVINO"
+                $openvinoSuccess = Install-OpenVINOPlugin -InstallPath $InstallPath
+                if (-not $openvinoSuccess) {
+                    $pluginInstallSuccess = $false
+                }
+            } else {
+                Write-Warning "CPU not compatible with OpenVINO plugins (requires Intel 6th gen or newer)"
+                Write-Info "Skipping OpenVINO installation"
+            }
+        }
+        
         # Step 3: Interactive first-time setup
         $firstTimeSuccess = Start-OBSFirstTime -SystemConfig $systemConfig
         
