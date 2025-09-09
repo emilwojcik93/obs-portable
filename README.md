@@ -656,6 +656,46 @@ iwr https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Depl
 
 **Note**: ScriptBlock method is preferred as it allows parameter passing, while `iwr | iex` uses default settings only.
 
+## 🔌 Plugin Setup Instructions
+
+### **🎮 Input Overlay Setup (Thomson Reuters Template)**
+
+After installing with `-InstallInputOverlay`, follow these steps:
+
+#### **1. Enable WebSocket Server**
+1. Open OBS Studio
+2. Go to **Tools** > **input-overlay-settings**
+3. Click **WebSocket Server** tab
+4. Check **"Forward and receive events through websocket server with address"**
+5. Click **OK**
+
+#### **2. Add Thomson Reuters Input History**
+1. **Add Source** > **Browser Source**
+2. Check **"Local file"** checkbox
+3. Click **Browse** and navigate to:
+   ```
+   [InstallPath]\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html
+   ```
+   *(Default: `C:\Users\[Username]\OBS-Studio-Portable\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html`)*
+4. Set **Width: 280**, **Height: 400**
+5. Click **OK**
+
+### **🤖 OpenVINO Setup (Transparent Background Webcam)**
+
+After installing with `-InstallOpenVINO`, follow these steps:
+
+#### **1. Add Webcam Source**
+1. **Add Source** > **Video Capture Device**
+2. Choose your camera and click **OK**
+
+#### **2. Configure Background Concealment**
+1. Right-click **Video Capture Device** > **Filters**
+2. **Audio/Video Filters** section > **+** > **OpenVINO Background Concealment**
+3. **Uncheck** "Background Blur"
+4. Adjust **"Smooth silhouette"** and **"Segmentation Mask Threshold"** to avoid overlapping/cropping borders
+5. **Effect Filters** section > **+** > **Chroma Key**
+6. Click **Close**
+
 ## 📋 Complete Parameters Reference
 
 ### **Core Parameters**

@@ -1237,7 +1237,7 @@ function Install-InputOverlayPlugin {
             Write-Info "Plugin data installed"
         }
         
-        # Install presets (extract the zip contents, not copy the zip file)
+        # Install presets (extract the zip contents properly)
         New-Item -Path "$InstallPath\data\input-overlay-presets" -ItemType Directory -Force | Out-Null
         
         # The presets download is a zip file, extract it first
@@ -1248,18 +1248,26 @@ function Install-InputOverlayPlugin {
             Copy-Item "$presetsContent\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
             Remove-Item $presetsContent -Recurse -Force -ErrorAction SilentlyContinue
         } else {
-            # Fallback: copy extracted content directly
-            Copy-Item "$presetsExtract\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+            # Fallback: copy extracted content directly if no zip found
+            if (Test-Path $presetsExtract) {
+                Copy-Item "$presetsExtract\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+            }
         }
         
         Write-Info "Presets installed to: $InstallPath\data\input-overlay-presets\"
         
-        # Install Thomson Reuters custom input history template
+        # Install Thomson Reuters custom input history template in input-history-windows folder
         $trTemplatePath = Join-Path $PSScriptRoot ".github\templates\thomson-reuters-input-history.html"
         if (Test-Path $trTemplatePath) {
-            $trDestPath = "$InstallPath\data\input-overlay-presets\thomson-reuters-input-history.html"
+            # Create input-history-windows folder
+            $inputHistoryPath = "$InstallPath\data\input-overlay-presets\input-history-windows"
+            New-Item -Path $inputHistoryPath -ItemType Directory -Force | Out-Null
+            
+            $trDestPath = "$inputHistoryPath\thomson-reuters-input-history.html"
             Copy-Item $trTemplatePath $trDestPath -Force
-            Write-Info "Thomson Reuters input history template installed"
+            Write-Info "Thomson Reuters template installed to: $inputHistoryPath\"
+            Write-Info "Setup: Tools > input-overlay-settings > WebSocket Server > Enable"
+            Write-Info "Add Browser Source > Local File > $trDestPath"
         }
         
         # Cleanup
@@ -2102,11 +2110,23 @@ try {
                     if ($InstallInputOverlay) {
                         Write-Info "  + Input Overlay: Keyboard/mouse/gamepad visualization"
                         Write-Info "    Presets: $InstallPath\data\input-overlay-presets\"
-                        Write-Info "    Thomson Reuters template: thomson-reuters-input-history.html"
+                        Write-Info ""
+                        Write-Info "  Setup Thomson Reuters Input History:"
+                        Write-Info "    1. Tools > input-overlay-settings > WebSocket Server > Enable checkbox"
+                        Write-Info "    2. Add Browser Source > Local File > Browse to:"
+                        Write-Info "       $InstallPath\data\input-overlay-presets\input-history-windows\thomson-reuters-input-history.html"
+                        Write-Info "    3. Set Width: 280, Height: 400"
                     }
                     if ($InstallOpenVINO) {
                         Write-Info "  + OpenVINO: AI-powered webcam effects (Intel hardware)"
                         Write-Info "    Filters: Background Concealment, Face Mesh, Smart Framing"
+                        Write-Info ""
+                        Write-Info "  Setup Transparent Background Webcam:"
+                        Write-Info "    1. Add Source > Video Capture Device > Choose camera > OK"
+                        Write-Info "    2. Right-click Video Capture Device > Filters"
+                        Write-Info "    3. Audio/Video Filters > + > OpenVINO Background Concealment"
+                        Write-Info "    4. Uncheck 'Background Blur', adjust 'Smooth silhouette' and 'Segmentation Mask Threshold'"
+                        Write-Info "    5. Effect Filters > + > Chroma Key > Close"
                     }
                 }
                 
