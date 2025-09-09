@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thomson Reuters Input History</title>
+    <style>
+        body {
+            background-color: rgba(0, 0, 0, 0);
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+            font-family: "Segoe UI", "Arial", sans-serif;
+            color: #FFFFFF;
+            text-align: center;
+        }
+
+        .container {
+            background: linear-gradient(135deg, 
+                rgba(255, 102, 0, 0.95) 0%,    /* Thomson Reuters Orange - More opaque */
+                rgba(0, 45, 98, 0.95) 100%);   /* Thomson Reuters Blue - More opaque */
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.5),
+                inset 0 2px 8px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            color: #FFFFFF;
+            letter-spacing: 2px;
+        }
+
+        .thomson-reuters-logo {
+            font-size: 18px;
+            color: #FFFFFF;
+            margin-bottom: 25px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: inline-block;
+        }
+
+        .input-display {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .key {
+            background: linear-gradient(145deg, 
+                rgba(255, 102, 0, 0.95) 0%,    /* TR Orange - More opaque */
+                rgba(255, 140, 50, 0.95) 100%); /* Lighter Orange - More opaque */
+            color: #FFFFFF;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            box-shadow: 
+                0 6px 12px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.4),
+                0 0 0 3px rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            min-width: 50px;
+            min-height: 50px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            letter-spacing: 1px;
+        }
+
+        .key.pressed {
+            background: linear-gradient(145deg, 
+                rgba(0, 45, 98, 0.95) 0%,      /* TR Blue - More opaque */
+                rgba(0, 85, 158, 0.95) 100%);  /* Brighter Blue */
+            transform: scale(1.15);
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.5),
+                inset 0 3px 6px rgba(255, 255, 255, 0.5),
+                0 0 0 4px rgba(0, 45, 98, 0.3),
+                0 0 20px rgba(0, 45, 98, 0.6);
+            color: #FFFFFF;
+            font-size: 24px;
+        }
+
+        .mouse-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .mouse-button {
+            background: linear-gradient(145deg, 
+                rgba(255, 102, 0, 0.9) 0%,
+                rgba(255, 140, 50, 0.9) 100%);
+            color: #FFFFFF;
+            padding: 14px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            box-shadow: 
+                0 6px 12px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                0 0 0 2px rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
+        }
+
+        .mouse-button.clicked {
+            background: linear-gradient(145deg, 
+                rgba(0, 45, 98, 0.95) 0%,
+                rgba(0, 85, 158, 0.95) 100%);
+            transform: scale(1.1);
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.5),
+                inset 0 3px 6px rgba(255, 255, 255, 0.4),
+                0 0 0 3px rgba(0, 45, 98, 0.4),
+                0 0 15px rgba(0, 45, 98, 0.7);
+            font-size: 18px;
+        }
+
+        .stats {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FF6600; /* Thomson Reuters Orange */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Animation for key presses */
+        @keyframes keyPress {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1.1); }
+        }
+
+        .key.pressed {
+            animation: keyPress 0.2s ease;
+        }
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            .header {
+                font-size: 24px;
+            }
+            
+            .key {
+                font-size: 16px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">INPUT MONITOR</div>
+        <div class="thomson-reuters-logo">THOMSON REUTERS</div>
+        
+        <div class="input-display" id="keyDisplay">
+            <!-- Keys will be dynamically added here -->
+        </div>
+        
+        <div class="mouse-display">
+            <div class="mouse-button" id="leftClick">L-CLICK</div>
+            <div class="mouse-button" id="rightClick">R-CLICK</div>
+            <div class="mouse-button" id="middleClick">M-CLICK</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-label">KEYS PRESSED</div>
+                <div class="stat-value" id="keyCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">MOUSE CLICKS</div>
+                <div class="stat-value" id="clickCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">SESSION TIME</div>
+                <div class="stat-value" id="sessionTime">00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Thomson Reuters Input History Monitor
+        // WebSocket connection to input-overlay
+        let socket;
+        let keyCount = 0;
+        let clickCount = 0;
+        let sessionStart = Date.now();
+        let activeKeys = new Set();
+
+        // Connect to input-overlay WebSocket (default port 16899)
+        function connectWebSocket() {
+            try {
+                socket = new WebSocket('ws://localhost:16899');
+                
+                socket.onopen = function() {
+                    console.log('Connected to input-overlay WebSocket');
+                };
+                
+                socket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleInputEvent(data);
+                    } catch (e) {
+                        console.error('Error parsing input data:', e);
+                    }
+                };
+                
+                socket.onclose = function() {
+                    console.log('WebSocket connection closed, attempting reconnect...');
+                    setTimeout(connectWebSocket, 2000);
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            } catch (e) {
+                console.error('Failed to connect to WebSocket:', e);
+                setTimeout(connectWebSocket, 5000);
+            }
+        }
+
+        // Handle input events from WebSocket
+        function handleInputEvent(data) {
+            if (data.type === 'keyboard') {
+                handleKeyboardEvent(data);
+            } else if (data.type === 'mouse') {
+                handleMouseEvent(data);
+            }
+            
+            updateStats();
+        }
+
+        // Handle keyboard events
+        function handleKeyboardEvent(data) {
+            const keyName = data.key || data.code || 'Unknown';
+            const isPressed = data.pressed || data.state === 'down';
+            
+            if (isPressed) {
+                addKey(keyName);
+                keyCount++;
+            } else {
+                removeKey(keyName);
+            }
+        }
+
+        // Handle mouse events
+        function handleMouseEvent(data) {
+            const button = data.button;
+            const isPressed = data.pressed || data.state === 'down';
+            
+            if (isPressed) {
+                clickCount++;
+                highlightMouseButton(button);
+            }
+        }
+
+        // Add key to display
+        function addKey(keyName) {
+            if (activeKeys.has(keyName)) return;
+            
+            activeKeys.add(keyName);
+            const keyElement = document.createElement('div');
+            keyElement.className = 'key pressed';
+            keyElement.textContent = keyName.toUpperCase();
+            keyElement.id = 'key-' + keyName;
+            
+            document.getElementById('keyDisplay').appendChild(keyElement);
+            
+            // Remove key after 2 seconds
+            setTimeout(() => removeKey(keyName), 2000);
+        }
+
+        // Remove key from display
+        function removeKey(keyName) {
+            activeKeys.delete(keyName);
+            const keyElement = document.getElementById('key-' + keyName);
+            if (keyElement) {
+                keyElement.remove();
+            }
+        }
+
+        // Highlight mouse button
+        function highlightMouseButton(button) {
+            let elementId;
+            switch(button) {
+                case 0:
+                case 'left':
+                    elementId = 'leftClick';
+                    break;
+                case 1:
+                case 'right':
+                    elementId = 'rightClick';
+                    break;
+                case 2:
+                case 'middle':
+                    elementId = 'middleClick';
+                    break;
+                default:
+                    return;
+            }
+            
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.add('clicked');
+                setTimeout(() => element.classList.remove('clicked'), 300);
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('keyCount').textContent = keyCount;
+            document.getElementById('clickCount').textContent = clickCount;
+            
+            const elapsed = Date.now() - sessionStart;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            document.getElementById('sessionTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Initialize
+        connectWebSocket();
+        setInterval(updateStats, 1000);
+        
+        // Demo mode for testing (remove in production)
+        function demoMode() {
+            const demoKeys = ['W', 'A', 'S', 'D', 'SPACE', 'SHIFT', 'CTRL'];
+            let i = 0;
+            
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    addKey(demoKeys[i % demoKeys.length]);
+                    keyCount++;
+                    i++;
+                }
+                
+                if (Math.random() > 0.8) {
+                    highlightMouseButton(Math.floor(Math.random() * 3));
+                    clickCount++;
+                }
+            }, 500);
+        }
+        
+        // Uncomment for demo mode (testing without WebSocket)
+        // demoMode();
+    </script>
+</body>
+</html>

@@ -65,6 +65,9 @@ Complete IaC solution for OBS Studio portable deployment with:
 .EXAMPLE
     .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -PerformanceMode 50
     Ultra-lightweight setup with Input Overlay for keyboard/mouse visualization
+.EXAMPLE
+    .\Deploy-OBSStudio.ps1 -Cleanup -InstallPath "D:\CustomOBS"
+    Clean up OBS installation from custom directory
 .NOTES
     Author: OBS IaC Team
     Version: 2.0 - Unified Performance System
@@ -157,14 +160,41 @@ if ($script:RequiresElevation) {
         # Add marker to detect elevated session and prevent window closure
         $argList += "-ElevatedSession"
 
-        # Determine execution method (local vs remote) - simplified approach
-        $script = if ($PSCommandPath) {
+        # Create temporary wrapper script to avoid command parsing issues
+        $wrapperScript = "${env:TEMP}\OBS-Elevated-Wrapper-$(Get-Date -Format 'yyyyMMdd-HHmmss').ps1"
+        
+        $wrapperContent = if ($PSCommandPath) {
             # Local execution
-            "& `'$($PSCommandPath)`' $($argList -join ' '); Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Yellow; Read-Host"
+            @"
+try {
+    & '$($PSCommandPath)' $($argList -join ' ')
+} catch {
+    Write-Error `$_.Exception.Message
+}
+Write-Host ''
+Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
+Write-Host 'Press any key to close this elevated window...' -ForegroundColor Yellow
+`$null = Read-Host
+Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
+"@
         } else {
-            # Remote execution  
-            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' '); Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Yellow; Read-Host"
+            # Remote execution
+            @"
+try {
+    &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
+} catch {
+    Write-Error `$_.Exception.Message
+}
+Write-Host ''
+Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
+Write-Host 'Press any key to close this elevated window...' -ForegroundColor Yellow
+`$null = Read-Host
+Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
+"@
         }
+        
+        # Write wrapper script
+        $wrapperContent | Out-File -FilePath $wrapperScript -Encoding UTF8
 
         # Choose best terminal (Windows Terminal > PowerShell 7 > Windows PowerShell)
         $powershellCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
@@ -172,9 +202,9 @@ if ($script:RequiresElevation) {
 
         try {
             if ($processCmd -eq "wt.exe") {
-                Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+                Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -File `"$wrapperScript`"" -Verb RunAs
             } else {
-                Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+                Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$wrapperScript`"" -Verb RunAs
             }
             
             Write-Host "Launched elevated session. Please check the new window." -ForegroundColor Green
@@ -1207,10 +1237,30 @@ function Install-InputOverlayPlugin {
             Write-Info "Plugin data installed"
         }
         
-        # Install presets
+        # Install presets (extract the zip contents, not copy the zip file)
         New-Item -Path "$InstallPath\data\input-overlay-presets" -ItemType Directory -Force | Out-Null
-        Copy-Item "$presetsExtract\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+        
+        # The presets download is a zip file, extract it first
+        $presetsZipFile = Get-ChildItem "$presetsExtract\*.zip" | Select-Object -First 1
+        if ($presetsZipFile) {
+            $presetsContent = "${env:TEMP}\input-overlay-presets-content"
+            Expand-Archive $presetsZipFile.FullName $presetsContent -Force
+            Copy-Item "$presetsContent\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+            Remove-Item $presetsContent -Recurse -Force -ErrorAction SilentlyContinue
+        } else {
+            # Fallback: copy extracted content directly
+            Copy-Item "$presetsExtract\*" "$InstallPath\data\input-overlay-presets\" -Recurse -Force
+        }
+        
         Write-Info "Presets installed to: $InstallPath\data\input-overlay-presets\"
+        
+        # Install Thomson Reuters custom input history template
+        $trTemplatePath = Join-Path $PSScriptRoot ".github\templates\thomson-reuters-input-history.html"
+        if (Test-Path $trTemplatePath) {
+            $trDestPath = "$InstallPath\data\input-overlay-presets\thomson-reuters-input-history.html"
+            Copy-Item $trTemplatePath $trDestPath -Force
+            Write-Info "Thomson Reuters input history template installed"
+        }
         
         # Cleanup
         Remove-Item $pluginZip, $presetsZip -Force -ErrorAction SilentlyContinue
@@ -1748,6 +1798,7 @@ try {
     # Handle special operations first
     if ($Cleanup) {
         Write-Info "=== Cleaning Up OBS Deployment ==="
+        Write-Info "Cleanup target: $InstallPath"
         $cleanupItems = @()
         
         # Stop OBS processes and background jobs
@@ -2051,6 +2102,7 @@ try {
                     if ($InstallInputOverlay) {
                         Write-Info "  + Input Overlay: Keyboard/mouse/gamepad visualization"
                         Write-Info "    Presets: $InstallPath\data\input-overlay-presets\"
+                        Write-Info "    Thomson Reuters template: thomson-reuters-input-history.html"
                     }
                     if ($InstallOpenVINO) {
                         Write-Info "  + OpenVINO: AI-powered webcam effects (Intel hardware)"
