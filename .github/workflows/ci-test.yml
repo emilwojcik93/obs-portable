@@ -51,32 +51,32 @@ jobs:
           $hasCriticalError = $result -match "Deployment failed|Installation failed|Cannot find path"
           
           if ($hasSystemAnalysis -and $hasConfigPreview -and $hasEnvironmentCheck -and $hasPerformanceMode -and -not $hasCriticalError) {
-            Write-Host "✅ CheckOnly mode working correctly" -ForegroundColor Green
-            Write-Host "System Analysis: ✅" -ForegroundColor Green
-            Write-Host "Config Preview: ✅" -ForegroundColor Green
-            Write-Host "Environment Check: ✅" -ForegroundColor Green
-            Write-Host "Performance Mode: ✅" -ForegroundColor Green
+            Write-Host "+ CheckOnly mode working correctly" -ForegroundColor Green
+            Write-Host "System Analysis: +" -ForegroundColor Green
+            Write-Host "Config Preview: +" -ForegroundColor Green
+            Write-Host "Environment Check: +" -ForegroundColor Green
+            Write-Host "Performance Mode: +" -ForegroundColor Green
           } else {
-            Write-Host "❌ CheckOnly mode missing expected output" -ForegroundColor Red
-            Write-Host "System Analysis: $(if($hasSystemAnalysis){'✅'}else{'❌'})" -ForegroundColor $(if($hasSystemAnalysis){'Green'}else{'Red'})
-            Write-Host "Config Preview: $(if($hasConfigPreview){'✅'}else{'❌'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
-            Write-Host "Environment Check: $(if($hasEnvironmentCheck){'✅'}else{'❌'})" -ForegroundColor $(if($hasEnvironmentCheck){'Green'}else{'Red'})
-            Write-Host "Performance Mode: $(if($hasPerformanceMode){'✅'}else{'❌'})" -ForegroundColor $(if($hasPerformanceMode){'Green'}else{'Red'})
-            Write-Host "Critical Error: $(if($hasCriticalError){'❌ YES'}else{'✅ NO'})" -ForegroundColor $(if($hasCriticalError){'Red'}else{'Green'})
+            Write-Host "- CheckOnly mode missing expected output" -ForegroundColor Red
+            Write-Host "System Analysis: $(if($hasSystemAnalysis){'+'}else{'-'})" -ForegroundColor $(if($hasSystemAnalysis){'Green'}else{'Red'})
+            Write-Host "Config Preview: $(if($hasConfigPreview){'+'}else{'-'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
+            Write-Host "Environment Check: $(if($hasEnvironmentCheck){'+'}else{'-'})" -ForegroundColor $(if($hasEnvironmentCheck){'Green'}else{'Red'})
+            Write-Host "Performance Mode: $(if($hasPerformanceMode){'+'}else{'-'})" -ForegroundColor $(if($hasPerformanceMode){'Green'}else{'Red'})
+            Write-Host "Critical Error: $(if($hasCriticalError){'- YES'}else{'+ NO'})" -ForegroundColor $(if($hasCriticalError){'Red'}else{'Green'})
             
             if ($hasCriticalError) {
               exit 1
             } else {
-              Write-Host "⚠️ Non-critical issues detected but core functionality working" -ForegroundColor Yellow
+              Write-Host "! Non-critical issues detected but core functionality working" -ForegroundColor Yellow
             }
           }
           
         } catch {
-          Write-Host "❌ CheckOnly test failed: $($_.Exception.Message)" -ForegroundColor Red
+          Write-Host "- CheckOnly test failed: $($_.Exception.Message)" -ForegroundColor Red
           # Don't exit on non-critical errors if basic functionality works
           $result = & .\Deploy-OBSStudio.ps1 -CheckOnly -PerformanceMode 60 2>&1
           if ($result -match "Environment check complete") {
-            Write-Host "⚠️ Script has non-critical errors but core functionality works" -ForegroundColor Yellow
+            Write-Host "! Script has non-critical errors but core functionality works" -ForegroundColor Yellow
           } else {
             exit 1
           }
@@ -99,23 +99,23 @@ jobs:
             $hasCorrectMode = $result -match "Performance Mode:.*$mode"
             
             if ($hasCorrectMode) {
-              Write-Host "  ✅ Mode $mode: PASS" -ForegroundColor Green
+              Write-Host "  + Mode ${mode}: PASS" -ForegroundColor Green
             } else {
-              Write-Host "  ❌ Mode $mode: FAIL" -ForegroundColor Red
+              Write-Host "  - Mode ${mode}: FAIL" -ForegroundColor Red
               $failed = $true
             }
             
           } catch {
-            Write-Host "  ❌ Mode $mode: ERROR - $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "  - Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
             $failed = $true
           }
         }
         
         if ($failed) {
-          Write-Host "❌ Some performance modes failed testing" -ForegroundColor Red
+          Write-Host "- Some performance modes failed testing" -ForegroundColor Red
           exit 1
         } else {
-          Write-Host "✅ All performance modes tested successfully" -ForegroundColor Green
+          Write-Host "+ All performance modes tested successfully" -ForegroundColor Green
         }
 
     - name: 📋 Test Help Documentation
@@ -128,15 +128,15 @@ jobs:
           $help = Get-Help .\Deploy-OBSStudio.ps1 -ErrorAction Stop
           
           if ($help.Synopsis -and $help.Description) {
-            Write-Host "✅ Help documentation is accessible" -ForegroundColor Green
+            Write-Host "+ Help documentation is accessible" -ForegroundColor Green
             Write-Host "Synopsis: $($help.Synopsis)" -ForegroundColor White
           } else {
-            Write-Host "❌ Help documentation incomplete" -ForegroundColor Red
+            Write-Host "- Help documentation incomplete" -ForegroundColor Red
             exit 1
           }
           
         } catch {
-          Write-Host "❌ Help documentation test failed: $($_.Exception.Message)" -ForegroundColor Red
+          Write-Host "- Help documentation test failed: $($_.Exception.Message)" -ForegroundColor Red
           exit 1
         }
 
@@ -144,9 +144,9 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "=== CI Test Summary ===" -ForegroundColor Green
-        Write-Host "✅ Script syntax validation passed" -ForegroundColor Green
-        Write-Host "✅ CheckOnly mode functionality verified" -ForegroundColor Green
-        Write-Host "✅ All performance modes tested successfully" -ForegroundColor Green
-        Write-Host "✅ Help documentation accessible" -ForegroundColor Green
+        Write-Host "+ Script syntax validation passed" -ForegroundColor Green
+        Write-Host "+ CheckOnly mode functionality verified" -ForegroundColor Green
+        Write-Host "+ All performance modes tested successfully" -ForegroundColor Green
+        Write-Host "+ Help documentation accessible" -ForegroundColor Green
         Write-Host ""
-        Write-Host "🚀 Deploy-OBSStudio.ps1 is ready for deployment!" -ForegroundColor Green
+        Write-Host "Deploy-OBSStudio.ps1 is ready for deployment!" -ForegroundColor Green

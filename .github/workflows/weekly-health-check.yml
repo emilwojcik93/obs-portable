@@ -40,21 +40,21 @@ jobs:
           
           Write-Host ""
           Write-Host "=== Health Check Results ===" -ForegroundColor Yellow
-          Write-Host "System Detection: $(if($hasSystemDetection){'✅ PASS'}else{'❌ FAIL'})" -ForegroundColor $(if($hasSystemDetection){'Green'}else{'Red'})
-          Write-Host "GPU Detection: $(if($hasGPUDetection){'✅ PASS'}else{'❌ FAIL'})" -ForegroundColor $(if($hasGPUDetection){'Green'}else{'Red'})
-          Write-Host "Display Detection: $(if($hasDisplayDetection){'✅ PASS'}else{'❌ FAIL'})" -ForegroundColor $(if($hasDisplayDetection){'Green'}else{'Red'})
-          Write-Host "Config Preview: $(if($hasConfigPreview){'✅ PASS'}else{'❌ FAIL'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
+          Write-Host "System Detection: $(if($hasSystemDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasSystemDetection){'Green'}else{'Red'})
+          Write-Host "GPU Detection: $(if($hasGPUDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasGPUDetection){'Green'}else{'Red'})
+          Write-Host "Display Detection: $(if($hasDisplayDetection){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasDisplayDetection){'Green'}else{'Red'})
+          Write-Host "Config Preview: $(if($hasConfigPreview){'+ PASS'}else{'- FAIL'})" -ForegroundColor $(if($hasConfigPreview){'Green'}else{'Red'})
           
           if ($hasSystemDetection -and $hasGPUDetection -and $hasDisplayDetection -and $hasConfigPreview) {
-            Write-Host "✅ All core functionality tests passed!" -ForegroundColor Green
+            Write-Host "+ All core functionality tests passed!" -ForegroundColor Green
             echo "SCRIPT_STATUS=PASS" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Host "❌ Some core functionality tests failed!" -ForegroundColor Red
+            Write-Host "- Some core functionality tests failed!" -ForegroundColor Red
             echo "SCRIPT_STATUS=FAIL" >> $env:GITHUB_OUTPUT
           }
           
         } catch {
-          Write-Host "❌ Script execution failed: $($_.Exception.Message)" -ForegroundColor Red
+          Write-Host "- Script execution failed: $($_.Exception.Message)" -ForegroundColor Red
           echo "SCRIPT_STATUS=FAIL" >> $env:GITHUB_OUTPUT
           echo "SCRIPT_ERROR=$($_.Exception.Message)" >> $env:GITHUB_OUTPUT
         }
@@ -160,16 +160,16 @@ jobs:
             $hasBitrateOutput = $result -match "Bitrate: \d+ kbps"
             
             if ($hasPerformanceOutput -and $hasBitrateOutput) {
-              Write-Host "  ✅ Mode ${mode}: PASS" -ForegroundColor Green
-              $results += "✅ Mode ${mode}: PASS"
+              Write-Host "  + Mode ${mode}: PASS" -ForegroundColor Green
+              $results += "+ Mode ${mode}: PASS"
             } else {
-              Write-Host "  ❌ Mode ${mode}: FAIL" -ForegroundColor Red
-              $results += "❌ Mode ${mode}: FAIL"
+              Write-Host "  - Mode ${mode}: FAIL" -ForegroundColor Red
+              $results += "- Mode ${mode}: FAIL"
             }
             
           } catch {
-            Write-Host "  ❌ Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
-            $results += "❌ Mode ${mode}: ERROR"
+            Write-Host "  - Mode ${mode}: ERROR - $($_.Exception.Message)" -ForegroundColor Red
+            $results += "- Mode ${mode}: ERROR"
           }
         }
         
@@ -177,7 +177,7 @@ jobs:
         Write-Host "=== Performance Mode Test Results ===" -ForegroundColor Yellow
         $results | ForEach-Object { Write-Host "  $_" }
         
-        $passCount = ($results | Where-Object { $_ -match "✅.*PASS" }).Count
+        $passCount = ($results | Where-Object { $_ -match "\+.*PASS" }).Count
         $totalCount = $results.Count
         
         echo "PERFORMANCE_PASS_COUNT=$passCount" >> $env:GITHUB_OUTPUT
@@ -197,12 +197,12 @@ jobs:
         
         # Script functionality
         $scriptStatus = "${{ steps.script_test.outputs.SCRIPT_STATUS }}"
-        Write-Host "🔧 Script Functionality: $scriptStatus" -ForegroundColor $(if($scriptStatus -eq 'PASS'){'Green'}else{'Red'})
+        Write-Host "Script Functionality: $scriptStatus" -ForegroundColor $(if($scriptStatus -eq 'PASS'){'Green'}else{'Red'})
         
         # OBS version detection
         $versionStatus = "${{ steps.obs_version_test.outputs.VERSION_STATUS }}"
         $obsVersion = "${{ steps.obs_version_test.outputs.OBS_VERSION }}"
-        Write-Host "📦 OBS Version Detection: $versionStatus" -ForegroundColor $(if($versionStatus -eq 'PASS'){'Green'}else{'Red'})
+        Write-Host "OBS Version Detection: $versionStatus" -ForegroundColor $(if($versionStatus -eq 'PASS'){'Green'}else{'Red'})
         if ($obsVersion) {
           Write-Host "   Latest OBS Version: $obsVersion" -ForegroundColor White
         }
@@ -210,7 +210,7 @@ jobs:
         # Download link availability
         $downloadStatus = "${{ steps.download_test.outputs.DOWNLOAD_STATUS }}"
         $downloadSize = "${{ steps.download_test.outputs.DOWNLOAD_SIZE_MB }}"
-        Write-Host "🔗 Download Link: $downloadStatus" -ForegroundColor $(if($downloadStatus -eq 'PASS'){'Green'}else{'Red'})
+        Write-Host "Download Link: $downloadStatus" -ForegroundColor $(if($downloadStatus -eq 'PASS'){'Green'}else{'Red'})
         if ($downloadSize) {
           Write-Host "   Download Size: $downloadSize MB" -ForegroundColor White
         }
@@ -219,7 +219,7 @@ jobs:
         $performanceStatus = "${{ steps.performance_test.outputs.PERFORMANCE_STATUS }}"
         $passCount = "${{ steps.performance_test.outputs.PERFORMANCE_PASS_COUNT }}"
         $totalCount = "${{ steps.performance_test.outputs.PERFORMANCE_TOTAL_COUNT }}"
-        Write-Host "⚡ Performance Modes: $performanceStatus ($passCount/$totalCount)" -ForegroundColor $(if($performanceStatus -eq 'PASS'){'Green'}else{'Red'})
+        Write-Host "Performance Modes: $performanceStatus ($passCount/$totalCount)" -ForegroundColor $(if($performanceStatus -eq 'PASS'){'Green'}else{'Red'})
         
         Write-Host ""
         
@@ -227,17 +227,17 @@ jobs:
         $allPassed = ($scriptStatus -eq 'PASS') -and ($versionStatus -eq 'PASS') -and ($downloadStatus -eq 'PASS') -and ($performanceStatus -eq 'PASS')
         
         if ($allPassed) {
-          Write-Host "🎉 Overall Health Status: EXCELLENT" -ForegroundColor Green
-          Write-Host "✅ All infrastructure components are functioning correctly" -ForegroundColor Green
-          Write-Host "✅ OBS Studio integration is stable and up-to-date" -ForegroundColor Green
-          Write-Host "✅ Remote execution capabilities are verified" -ForegroundColor Green
+          Write-Host "Overall Health Status: EXCELLENT" -ForegroundColor Green
+          Write-Host "+ All infrastructure components are functioning correctly" -ForegroundColor Green
+          Write-Host "+ OBS Studio integration is stable and up-to-date" -ForegroundColor Green
+          Write-Host "+ Remote execution capabilities are verified" -ForegroundColor Green
         } else {
-          Write-Host "⚠️ Overall Health Status: NEEDS ATTENTION" -ForegroundColor Yellow
+          Write-Host "Overall Health Status: NEEDS ATTENTION" -ForegroundColor Yellow
           Write-Host "Some components require investigation" -ForegroundColor Yellow
         }
         
         Write-Host ""
-        Write-Host "📅 Next health check: $(Get-Date (Get-Date).AddDays(7) -Format 'yyyy-MM-dd')" -ForegroundColor Gray
+        Write-Host "Next health check: $(Get-Date (Get-Date).AddDays(7) -Format 'yyyy-MM-dd')" -ForegroundColor Gray
 
     - name: 🚨 Log Failure Details
       if: steps.script_test.outputs.SCRIPT_STATUS == 'FAIL' || steps.obs_version_test.outputs.VERSION_STATUS == 'FAIL' || steps.download_test.outputs.DOWNLOAD_STATUS == 'FAIL'
@@ -245,29 +245,29 @@ jobs:
       run: |
         Write-Host "=== Infrastructure Failure Detected ===" -ForegroundColor Red
         Write-Host ""
-        Write-Host "📊 Health Check Results:" -ForegroundColor Yellow
+        Write-Host "Health Check Results:" -ForegroundColor Yellow
         Write-Host "- Script Functionality: ${{ steps.script_test.outputs.SCRIPT_STATUS }}" -ForegroundColor White
         Write-Host "- OBS Version Detection: ${{ steps.obs_version_test.outputs.VERSION_STATUS }}" -ForegroundColor White
         Write-Host "- Download Link Availability: ${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" -ForegroundColor White
         Write-Host ""
         
         if ("${{ steps.script_test.outputs.SCRIPT_STATUS }}" -eq "FAIL") {
-          Write-Host "🔍 Script Error Details:" -ForegroundColor Red
+          Write-Host "Script Error Details:" -ForegroundColor Red
           Write-Host "${{ steps.script_test.outputs.SCRIPT_ERROR }}" -ForegroundColor White
         }
         
         if ("${{ steps.obs_version_test.outputs.VERSION_STATUS }}" -eq "FAIL") {
-          Write-Host "🔍 Version Detection Error:" -ForegroundColor Red
+          Write-Host "Version Detection Error:" -ForegroundColor Red
           Write-Host "${{ steps.obs_version_test.outputs.VERSION_ERROR }}" -ForegroundColor White
         }
         
         if ("${{ steps.download_test.outputs.DOWNLOAD_STATUS }}" -eq "FAIL") {
-          Write-Host "🔍 Download Link Error:" -ForegroundColor Red
+          Write-Host "Download Link Error:" -ForegroundColor Red
           Write-Host "${{ steps.download_test.outputs.DOWNLOAD_ERROR }}" -ForegroundColor White
         }
         
         Write-Host ""
-        Write-Host "🔧 Manual investigation required for failed components" -ForegroundColor Yellow
+        Write-Host "Manual investigation required for failed components" -ForegroundColor Yellow
 
     - name: 📈 Update Repository Health Badge
       if: always()
@@ -299,4 +299,4 @@ jobs:
         }
         
         $healthData | ConvertTo-Json | Out-File -FilePath "health-status.json" -Encoding UTF8
-        Write-Host "✅ Health status data generated" -ForegroundColor Green
+        Write-Host "+ Health status data generated" -ForegroundColor Green
