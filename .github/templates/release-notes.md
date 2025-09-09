@@ -4,11 +4,13 @@
 
 ### Key Features
 - **5-Tier Performance System**: 33%, 50%, 60%, 75%, 90% scaling modes
+- **Plugin Ecosystem**: Input Overlay + OpenVINO with auto-elevation
 - **Advanced Hardware Detection**: Real monitor names (Philips PHL 499P9, etc.)
 - **Encoder Overload Prevention**: Extreme performance mode for problematic hardware
 - **Microsoft Cloud Integration**: OneDrive/SharePoint optimized settings
 - **Enterprise Deployment**: Scheduled tasks, notifications, protection systems
 - **Interactive Setup**: Respects OBS wizard while automating optimization
+- **Thomson Reuters Branding**: Custom input history template with corporate styling
 
 ### Performance Modes
 | Mode | Scaling | Use Case | Command |
@@ -23,14 +25,17 @@
 
 #### Remote Execution (Recommended)
 ```powershell
-# Default lightweight deployment (60% scaling)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
+# Complete setup with plugins and enterprise features
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
 
-# Encoder overload prevention (33% scaling)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications
+# Gaming/streaming setup with Thomson Reuters input overlay
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -EnableNotifications -PerformanceMode 75"
 
-# Enterprise deployment with scheduled tasks (requires admin)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications
+# AI webcam effects for professional content
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallOpenVINO -EnableNotifications -PerformanceMode 90"
+
+# Encoder overload prevention (extreme performance)
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications"
 ```
 
 #### Local Execution
