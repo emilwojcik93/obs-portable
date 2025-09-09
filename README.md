@@ -38,15 +38,23 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 
 ### **⚡ TLDR - One Command Setup**
 ```powershell
-# Remote execution - Most common setup (no download required)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
+# Remote execution - Complete setup with all features (run in Terminal as Admin)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay
 
 # What this does:
-# ✅ Downloads and installs OBS Studio portable
-# ✅ Detects your hardware (GPU, display, OneDrive)  
-# ✅ Configures optimal settings (60% scaling, 3000 kbps)
+# ✅ Downloads and installs OBS Studio portable (latest version)
+# ✅ Detects your hardware (GPU, display, OneDrive) with verbose output
+# ✅ Configures optimal settings (60% scaling, 3000 kbps Intel QuickSync)
+# ✅ Installs scheduled tasks for auto-recording on login
 # ✅ Shows balloon notifications for recording status
-# ✅ Ready to record in ~2 minutes
+# ✅ Uses primary display automatically
+# ✅ Complete enterprise setup in ~3 minutes
+```
+
+### **🔴 Encoder Overload Prevention**
+```powershell
+# For severe encoder overload (33% scaling) - run in Terminal as Admin
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -PerformanceMode 33
 ```
 
 ### **📋 Local Installation**
