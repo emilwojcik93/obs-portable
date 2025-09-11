@@ -153,6 +153,48 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Template function must be declared early for auto-elevation logic
+function Get-ScriptTemplate {
+    param(
+        [string]$TemplateName,
+        [hashtable]$Parameters
+    )
+
+    # Try to get template from local directory first
+    $scriptPath = if ($MyInvocation.ScriptName) {
+        Split-Path -Parent $MyInvocation.ScriptName
+    } else {
+        $PWD.Path
+    }
+    $localTemplatePath = Join-Path $scriptPath "templates\scripts\$TemplateName"
+
+    if (Test-Path $localTemplatePath) {
+        $templateContent = Get-Content -Path $localTemplatePath -Raw
+        Write-Verbose "Using local script template: $TemplateName"
+    } else {
+        # Download from repository
+        $templateUrl = "https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/scripts/$TemplateName"
+        $tempFile = Join-Path ${env:TEMP} "temp-$TemplateName"
+
+        try {
+            # Use basic download for early function calls
+            Invoke-WebRequest -Uri $templateUrl -OutFile $tempFile -UseBasicParsing -ErrorAction Stop
+            $templateContent = Get-Content -Path $tempFile -Raw
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Verbose "Downloaded script template: $TemplateName"
+        } catch {
+            throw "Failed to download script template $TemplateName`: $($_.Exception.Message)"
+        }
+    }
+
+    # Replace parameters
+    foreach ($param in $Parameters.GetEnumerator()) {
+        $templateContent = $templateContent -replace "\{\{$($param.Key)\}\}", $param.Value
+    }
+
+    return $templateContent
+}
+
 # Initialize logging to file by default
 if (-not $LogToFile) {
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -310,46 +352,6 @@ function Write-Error {
     param([string]$Message)
     Write-Host $Message -ForegroundColor Red
     if ($script:LogToFile) { Add-Content -Path $script:LogToFile -Value $Message }
-}
-
-function Get-ScriptTemplate {
-    param(
-        [string]$TemplateName,
-        [hashtable]$Parameters
-    )
-
-    # Try to get template from local directory first
-    $scriptPath = if ($MyInvocation.ScriptName) {
-        Split-Path -Parent $MyInvocation.ScriptName
-    } else {
-        $PWD.Path
-    }
-    $localTemplatePath = Join-Path $scriptPath "templates\scripts\$TemplateName"
-
-    if (Test-Path $localTemplatePath) {
-        $templateContent = Get-Content -Path $localTemplatePath -Raw
-        Write-Verbose "Using local script template: $TemplateName"
-    } else {
-        # Download from repository
-        $templateUrl = "https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/scripts/$TemplateName"
-        $tempFile = Join-Path ${env:TEMP} "temp-$TemplateName"
-
-        try {
-            Invoke-RobustDownload -Uri $templateUrl -OutFile $tempFile -Description "script template $TemplateName" -ShowProgress $false
-            $templateContent = Get-Content -Path $tempFile -Raw
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            Write-Verbose "Downloaded script template: $TemplateName"
-        } catch {
-            throw "Failed to download script template $TemplateName`: $($_.Exception.Message)"
-        }
-    }
-
-    # Replace parameters
-    foreach ($param in $Parameters.GetEnumerator()) {
-        $templateContent = $templateContent -replace "\{\{$($param.Key)\}\}", $param.Value
-    }
-
-    return $templateContent
 }
 
 function Invoke-RobustDownload {
