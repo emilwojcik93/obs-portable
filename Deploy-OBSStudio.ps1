@@ -2383,8 +2383,8 @@ function Install-InputOverlayPlugin {
                 Copy-Item -Path $localTemplatePath -Destination $templateDestPath -Force
                 Write-Success 'Professional input history template installed from local templates'
             } else {
-                # Fallback: Download from repository if local template not found
-                $templateUrl = 'https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/input-overlay/custom-input-history.html'
+                # Fallback: Download from latest release assets
+                $templateUrl = 'https://github.com/emilwojcik93/obs-portable/releases/latest/download/custom-input-history.html'
                 Invoke-RobustDownload -Uri $templateUrl -OutFile $templateDestPath -Description 'professional input history template' -ShowProgress $false
             }
 
@@ -2397,7 +2397,7 @@ function Install-InputOverlayPlugin {
         } catch {
             Write-Warning "Failed to download professional input history template: $($_.Exception.Message)"
             Write-Info 'Use standard Input Overlay presets from: $InstallPath\data\input-overlay-presets\'
-            Write-Info 'Professional template available at: https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/input-overlay/custom-input-history.html'
+            Write-Info 'Professional template available at: https://github.com/emilwojcik93/obs-portable/releases/latest/download/custom-input-history.html'
         }
 
         # Cleanup

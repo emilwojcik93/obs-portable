@@ -52,7 +52,7 @@ jobs:
         files: |
           Deploy-OBSStudio.ps1
           README.md
-          .github/templates/custom-input-history.html
+          templates/input-overlay/custom-input-history.html
         draft: false
         prerelease: false
       env:
@@ -65,4 +65,4 @@ jobs:
         echo "Remote execution ready!"
         echo ""
         echo "Usage:"
-        echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications'
+        echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications'
