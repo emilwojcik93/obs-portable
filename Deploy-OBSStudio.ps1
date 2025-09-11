@@ -157,6 +157,12 @@ if (-not $LogToFile) {
 }
 $script:LogToFile = $LogToFile
 
+# Safety check: Ensure InstallPath is properly set (fix for remote execution)
+if (-not $InstallPath -or $InstallPath -eq '-' -or $InstallPath -eq '') {
+    $InstallPath = "${env:USERPROFILE}\OBS-Studio-Portable"
+    Write-Verbose "InstallPath was not properly set, using default: $InstallPath"
+}
+
 # Detect if running in elevated session (to prevent window closure)
 $script:IsElevatedSession = $false
 $script:RequiresElevation = $InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO
@@ -170,7 +176,14 @@ if ($script:RequiresElevation) {
 
         # Build argument list preserving all parameters
         $argList = @()
+        
+        # Always include InstallPath to ensure it's not lost during elevation
+        $argList += "-InstallPath '$InstallPath'"
+        
         $PSBoundParameters.GetEnumerator() | ForEach-Object {
+            # Skip InstallPath since we already added it above
+            if ($_.Key -eq 'InstallPath') { return }
+            
             $argList += if ($_.Value -is [switch] -and $_.Value) {
                 "-$($_.Key)"
             } elseif ($_.Value -is [array]) {
