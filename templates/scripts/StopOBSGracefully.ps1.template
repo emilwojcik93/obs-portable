@@ -23,7 +23,7 @@ if ($obs) {
 
     try {
         # Method 1: Quick command line stop (if WebSocket enabled)
-        $webSocketEnabled = {{WEBSOCKET_ENABLED}}
+        $webSocketEnabled = ${{WEBSOCKET_ENABLED}}
         if ($webSocketEnabled) {
             try {
                 Push-Location (Split-Path $obs.Path)
