@@ -1,0 +1,19 @@
+try {
+    Set-Location '{{WORKING_DIRECTORY}}'
+    {{EXECUTION_COMMAND}}
+    $exitCode = $LASTEXITCODE
+} catch {
+    Write-Error $_.Exception.Message
+    $exitCode = 1
+}
+Write-Host ''
+Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
+if ($exitCode -eq 0) {
+    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
+}
+Write-Host ''
+Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
+$null = Read-Host
+Remove-Item '{{WRAPPER_SCRIPT_PATH}}' -Force -ErrorAction SilentlyContinue

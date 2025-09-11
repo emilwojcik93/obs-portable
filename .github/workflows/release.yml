@@ -3,7 +3,7 @@ name: OBS Studio IaC Release
 on:
   push:
     branches: [ main ]
-    paths: 
+    paths:
       - 'Deploy-OBSStudio.ps1'
       - 'README.md'
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
     runs-on: windows-2025
     permissions:
       contents: write
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
       run: |
         # Generate release notes and capture output
         $scriptOutput = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md"
-        
+
         # Extract version from script output
         $versionMatch = $scriptOutput | Select-String -Pattern "VERSION=(.+)"
         if ($versionMatch) {
@@ -36,7 +36,7 @@ jobs:
         } else {
           echo "VERSION=2.0" >> $env:GITHUB_OUTPUT
         }
-        
+
         # Read generated release notes
         $releaseNotes = Get-Content "RELEASE_NOTES.md" -Raw
         echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
@@ -52,7 +52,6 @@ jobs:
         files: |
           Deploy-OBSStudio.ps1
           README.md
-          templates/input-overlay/custom-input-history.html
         draft: false
         prerelease: false
       env:
@@ -65,4 +64,4 @@ jobs:
         echo "Remote execution ready!"
         echo ""
         echo "Usage:"
-        echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications'
+        echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -SilentDeployment'

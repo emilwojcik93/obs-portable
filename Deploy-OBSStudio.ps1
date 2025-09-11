@@ -2434,8 +2434,8 @@ function Install-InputOverlayPlugin {
                 Copy-Item -Path $localTemplatePath -Destination $templateDestPath -Force
                 Write-Success 'Professional input history template installed from local templates'
             } else {
-                # Fallback: Download from latest release assets
-                $templateUrl = 'https://github.com/emilwojcik93/obs-portable/releases/latest/download/custom-input-history.html'
+                # Fallback: Download from repository (same method as configuration templates)
+                $templateUrl = 'https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/input-overlay/custom-input-history.html'
                 Invoke-RobustDownload -Uri $templateUrl -OutFile $templateDestPath -Description 'professional input history template' -ShowProgress $false
             }
 
@@ -2448,7 +2448,7 @@ function Install-InputOverlayPlugin {
         } catch {
             Write-Warning "Failed to download professional input history template: $($_.Exception.Message)"
             Write-Info 'Use standard Input Overlay presets from: $InstallPath\data\input-overlay-presets\'
-            Write-Info 'Professional template available at: https://github.com/emilwojcik93/obs-portable/releases/latest/download/custom-input-history.html'
+            Write-Info 'Professional template available at: https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/input-overlay/custom-input-history.html'
         }
 
         # Cleanup
@@ -2970,6 +2970,46 @@ function Optimize-OBSConfiguration {
     }
 }
 
+function Get-ScriptTemplate {
+    param(
+        [string]$TemplateName,
+        [hashtable]$Parameters
+    )
+
+    # Try to get template from local directory first
+    $scriptPath = if ($MyInvocation.ScriptName) {
+        Split-Path -Parent $MyInvocation.ScriptName
+    } else {
+        $PWD.Path
+    }
+    $localTemplatePath = Join-Path $scriptPath "templates\scripts\$TemplateName"
+
+    if (Test-Path $localTemplatePath) {
+        $templateContent = Get-Content -Path $localTemplatePath -Raw
+        Write-Verbose "Using local script template: $TemplateName"
+    } else {
+        # Download from repository
+        $templateUrl = "https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/scripts/$TemplateName"
+        $tempFile = Join-Path ${env:TEMP} "temp-$TemplateName"
+
+        try {
+            Invoke-RobustDownload -Uri $templateUrl -OutFile $tempFile -Description "script template $TemplateName" -ShowProgress $false
+            $templateContent = Get-Content -Path $tempFile -Raw
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Write-Verbose "Downloaded script template: $TemplateName"
+        } catch {
+            throw "Failed to download script template $TemplateName`: $($_.Exception.Message)"
+        }
+    }
+
+    # Replace parameters
+    foreach ($param in $Parameters.GetEnumerator()) {
+        $templateContent = $templateContent -replace "\{\{$($param.Key)\}\}", $param.Value
+    }
+
+    return $templateContent
+}
+
 function New-DesktopShortcuts {
     param(
         [string]$InstallPath
@@ -2997,130 +3037,14 @@ function New-DesktopShortcuts {
         $startShortcut.Save()
         Write-Success 'Created: Start OBS Recording.lnk'
 
-        # Create a helper script for graceful OBS shutdown
+        # Create graceful shutdown script from template
         $shutdownHelperPath = Join-Path $InstallPath 'StopOBSGracefully.ps1'
-        $shutdownHelperScript = @'
-# Graceful OBS shutdown script with WebSocket support
-$obs = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
-if ($obs) {
-    try {
-        Write-Host "Found OBS process, attempting graceful shutdown..." -ForegroundColor Cyan
 
-        # Method 1: Try WebSocket API for cleanest shutdown (if enabled)
-        try {
-            # Check if WebSocket is enabled and available (OBS WebSocket default port 4455)
-            $webSocketAvailable = $false
-            $webSocketEnabled = $true  # Default enabled unless explicitly disabled
-            
-            if ($webSocketEnabled) {
-                try {
-                    $tcpClient = New-Object System.Net.Sockets.TcpClient
-                    $tcpClient.Connect("localhost", 4455)
-                    $webSocketAvailable = $true
-                    $tcpClient.Close()
-                    Write-Host "WebSocket server detected, attempting clean stop..." -ForegroundColor Green
-                } catch {
-                    Write-Host "WebSocket not available, using alternative methods..." -ForegroundColor Yellow
-                }
-            } else {
-                Write-Host "WebSocket disabled for restricted networks, using alternative methods..." -ForegroundColor Yellow
-            }
-
-            if ($webSocketAvailable) {
-                # Send stop recording request via WebSocket (basic implementation)
-                $webRequest = @{
-                    Uri = "ws://localhost:4455"
-                    Method = "POST"
-                    Body = '{"op": 6, "d": {"requestType": "StopRecord"}}'
-                    ContentType = "application/json"
-                }
-
-                try {
-                    # Simple HTTP request to WebSocket (fallback approach)
-                    Invoke-RestMethod -Uri "http://localhost:4455" -Method GET -TimeoutSec 2 -ErrorAction SilentlyContinue
-                    Start-Sleep 3
-                    Write-Host "Recording stopped via WebSocket" -ForegroundColor Green
-                } catch {
-                    Write-Host "WebSocket request failed, using command line..." -ForegroundColor Yellow
-                }
-            }
-        } catch {
-            Write-Host "WebSocket method failed, using command line..." -ForegroundColor Yellow
+        $shutdownParams = @{
+            'WEBSOCKET_ENABLED' = if ($DisableWebSocket) { '$false' } else { '$true' }
         }
 
-        # Method 2: Try OBS command line to stop recording
-        try {
-            Push-Location (Split-Path $obs.Path)
-            $stopProcess = Start-Process -FilePath ".\obs64.exe" -ArgumentList @("--portable", "--stoprecording") -WindowStyle Hidden -PassThru
-            if ($stopProcess.WaitForExit(5000)) {
-                Write-Host "Recording stopped via command line" -ForegroundColor Green
-            }
-            Start-Sleep 3
-        } catch {
-            Write-Host "Command line stop failed: $($_.Exception.Message)" -ForegroundColor Yellow
-        } finally {
-            Pop-Location
-        }
-
-        # Method 3: Graceful window close with extended timeout
-        Write-Host "Attempting graceful window close..." -ForegroundColor Cyan
-        $closeResult = $obs.CloseMainWindow()
-        Write-Host "CloseMainWindow result: $closeResult" -ForegroundColor Gray
-
-        # Wait longer for graceful shutdown (OBS needs time to finalize recordings)
-        $shutdownTimeout = 20000  # 20 seconds for large files
-        if ($obs.WaitForExit($shutdownTimeout)) {
-            Write-Host "OBS closed gracefully" -ForegroundColor Green
-        } else {
-            Write-Host "Graceful shutdown timeout, force terminating..." -ForegroundColor Yellow
-            # Method 4: Force terminate as last resort
-            try {
-                $obs.Kill()
-                if ($obs.WaitForExit(5000)) {
-                    Write-Host "OBS force terminated" -ForegroundColor Red
-                }
-            } catch {
-                Write-Host "Force termination failed: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        }
-
-        # Method 5: Clean up any remaining OBS processes (comprehensive cleanup)
-        Start-Sleep 2
-        $allOBSProcesses = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
-        if ($allOBSProcesses) {
-            Write-Host "Found $($allOBSProcesses.Count) remaining OBS process(es), force cleaning..." -ForegroundColor Yellow
-            foreach ($remainingOBS in $allOBSProcesses) {
-                try {
-                    $remainingOBS.Kill()
-                    $remainingOBS.WaitForExit(3000)
-                    Write-Host "Killed remaining OBS process $($remainingOBS.Id)" -ForegroundColor Yellow
-                } catch {
-                    Write-Host "Failed to kill OBS process $($remainingOBS.Id)" -ForegroundColor Red
-                }
-            }
-        }
-
-        # Final verification
-        $finalCheck = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
-        if (-not $finalCheck) {
-            Write-Host "OBS shutdown completed successfully - all processes terminated" -ForegroundColor Green
-        } else {
-            Write-Host "Warning: $($finalCheck.Count) OBS process(es) still running" -ForegroundColor Red
-        }
-
-    } catch {
-        Write-Host "Error during OBS shutdown: $($_.Exception.Message)" -ForegroundColor Red
-        # Emergency force close
-        try {
-            $obs.Kill()
-        } catch {
-            Write-Host "Emergency force close failed" -ForegroundColor Red
-        }
-    }
-} else {
-    Write-Host "OBS not running" -ForegroundColor Gray
-}
-'@
+        $shutdownHelperScript = Get-ScriptTemplate -TemplateName 'StopOBSGracefully.ps1.template' -Parameters $shutdownParams
         Set-Content -Path $shutdownHelperPath -Value $shutdownHelperScript -Encoding UTF8
 
         # Shortcut 2: Stop Recording and Close OBS (using helper script)

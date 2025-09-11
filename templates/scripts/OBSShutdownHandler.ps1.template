@@ -1,0 +1,18 @@
+# OBS Shutdown Handler - Registers for system shutdown events
+Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
+    & "{{SERVICE_SCRIPT_PATH}}" -Action Shutdown
+} | Out-Null
+
+# Keep the script running to monitor for shutdown
+try {
+    while ($true) {
+        Start-Sleep -Seconds 60
+        # Check if OBS is still running, if not, exit the monitor
+        if (-not (Get-Process -Name "obs64" -ErrorAction SilentlyContinue)) {
+            Start-Sleep -Seconds 300  # Wait 5 minutes before checking again
+        }
+    }
+} catch {
+    # If interrupted, ensure OBS is stopped
+    & "{{SERVICE_SCRIPT_PATH}}" -Action Shutdown
+}
