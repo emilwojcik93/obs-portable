@@ -21,48 +21,48 @@ jobs:
         with:
           fetch-depth: 0
 
-       - name: Generate Version and Release Notes
-         id: release_notes
-         shell: pwsh
-         run: |
-           # Dynamic version calculation based on git tags and commits
-           try {
-             # Get latest tag
-             $latestTag = git describe --tags --abbrev=0 2>$null
-             if ($latestTag -match '^v?(\d+)\.(\d+)(?:\.(\d+))?') {
-               $major = [int]$matches[1]
-               $minor = [int]$matches[2]
-               $patch = if ($matches[3]) { [int]$matches[3] } else { 0 }
-             } else {
-               $major = 3; $minor = 0; $patch = 0
-             }
-
-             # Check if there are commits since last tag
-             $commitsSinceTag = git rev-list --count HEAD ^$latestTag 2>$null
-             if ($commitsSinceTag -gt 0) {
-               $patch++  # Increment patch version for new commits
-             }
-
-             $version = "$major.$minor.$patch"
-           } catch {
-             # Fallback version if git operations fail
-             $version = "3.1.0"
-           }
-
-           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-
-           # Generate release notes from template
-           $recentCommits = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
-           $commitList = $recentCommits -join "`n- "
-
-           # Use release notes template file
-           $templateContent = Get-Content ".github/templates/release-notes.md" -Raw
-           $releaseNotes = $templateContent -replace '\{\{VERSION\}\}', $version
-           $releaseNotes = $releaseNotes -replace '\{\{RECENT_COMMITS\}\}', "- $commitList"
-
-           echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
-           echo $releaseNotes >> $env:GITHUB_OUTPUT
-           echo "EOF" >> $env:GITHUB_OUTPUT
+      - name: Generate Version and Release Notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          # Dynamic version calculation based on git tags and commits
+          try {
+            # Get latest tag
+            $latestTag = git describe --tags --abbrev=0 2>$null
+            if ($latestTag -match '^v?(\d+)\.(\d+)(?:\.(\d+))?') {
+              $major = [int]$matches[1]
+              $minor = [int]$matches[2]
+              $patch = if ($matches[3]) { [int]$matches[3] } else { 0 }
+            } else {
+              $major = 3; $minor = 0; $patch = 0
+            }
+            
+            # Check if there are commits since last tag
+            $commitsSinceTag = git rev-list --count HEAD ^$latestTag 2>$null
+            if ($commitsSinceTag -gt 0) {
+              $patch++  # Increment patch version for new commits
+            }
+            
+            $version = "$major.$minor.$patch"
+          } catch {
+            # Fallback version if git operations fail
+            $version = "3.1.0"
+          }
+          
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          
+          # Generate release notes from template
+          $recentCommits = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
+          $commitList = $recentCommits -join "`n- "
+          
+          # Use release notes template file
+          $templateContent = Get-Content ".github/templates/release-notes.md" -Raw
+          $releaseNotes = $templateContent -replace '\{\{VERSION\}\}', $version
+          $releaseNotes = $releaseNotes -replace '\{\{RECENT_COMMITS\}\}', "- $commitList"
+          
+          echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
+          echo $releaseNotes >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
