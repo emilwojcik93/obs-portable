@@ -2,10 +2,10 @@ name: OBS Studio IaC Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'Deploy-OBSStudio.ps1'
-      - 'README.md'
+      - "Deploy-OBSStudio.ps1"
+      - "README.md"
   workflow_dispatch:
     # Allow manual triggering for testing
 
@@ -16,52 +16,52 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Generate Release Notes
-      id: release_notes
-      shell: pwsh
-      run: |
-        # Generate release notes and capture output
-        $scriptOutput = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md"
+      - name: Generate Release Notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          # Generate release notes and capture output
+          $scriptOutput = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md"
 
-        # Extract version from script output
-        $versionMatch = $scriptOutput | Select-String -Pattern "VERSION=(.+)"
-        if ($versionMatch) {
-          $version = $versionMatch.Matches[0].Groups[1].Value
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-        } else {
-          echo "VERSION=2.0" >> $env:GITHUB_OUTPUT
-        }
+          # Extract version from script output
+          $versionMatch = $scriptOutput | Select-String -Pattern "VERSION=(.+)"
+          if ($versionMatch) {
+            $version = $versionMatch.Matches[0].Groups[1].Value
+            echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "VERSION=2.0" >> $env:GITHUB_OUTPUT
+          }
 
-        # Read generated release notes
-        $releaseNotes = Get-Content "RELEASE_NOTES.md" -Raw
-        echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
-        echo $releaseNotes >> $env:GITHUB_OUTPUT
-        echo "EOF" >> $env:GITHUB_OUTPUT
+          # Read generated release notes
+          $releaseNotes = Get-Content "RELEASE_NOTES.md" -Raw
+          echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
+          echo $releaseNotes >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ steps.release_notes.outputs.VERSION }}
-        name: "OBS Studio IaC v${{ steps.release_notes.outputs.VERSION }}"
-        body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-        files: |
-          Deploy-OBSStudio.ps1
-          README.md
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.release_notes.outputs.VERSION }}
+          name: "OBS Studio IaC v${{ steps.release_notes.outputs.VERSION }}"
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          files: |
+            Deploy-OBSStudio.ps1
+            README.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Release Summary
-      run: |
-        echo "+ Released OBS Studio IaC v${{ steps.release_notes.outputs.VERSION }}"
-        echo "Assets: Deploy-OBSStudio.ps1, README.md"
-        echo "Remote execution ready!"
-        echo ""
-        echo "Usage:"
-        echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -SilentDeployment'
+      - name: Release Summary
+        run: |
+          echo "+ Released OBS Studio IaC v${{ steps.release_notes.outputs.VERSION }}"
+          echo "Assets: Deploy-OBSStudio.ps1, README.md"
+          echo "Remote execution ready!"
+          echo ""
+          echo "Usage:"
+          echo '&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -SilentDeployment'
