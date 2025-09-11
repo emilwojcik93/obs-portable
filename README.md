@@ -39,20 +39,22 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 
 ### **⚡ TLDR - One Command Setup**
 ```powershell
-# Complete setup with plugins and enterprise features (run in Terminal as Admin)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
+# Complete zero-touch enterprise setup (run in Terminal as Admin)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -InternalDisplay -PerformanceMode 50 -SilentDeployment -InstallAutoRecording -CreateDesktopShortcuts
 
 # What this does:
 # ✅ Downloads and installs OBS Studio portable (latest version)
-# ✅ Installs Input Overlay plugin with custom template
-# ✅ Installs OpenVINO plugins for Intel AI webcam effects
+# ✅ Installs Input Overlay + OpenVINO plugins automatically (Intel hardware)
 # ✅ Detects your hardware (GPU, display, OneDrive) with verbose output
 # ✅ Configures optimal settings (50% scaling for encoder overload prevention)
-# ✅ Installs scheduled tasks for auto-recording on login
-# ✅ Shows balloon notifications for recording status
-# ✅ Uses primary display automatically
+# ✅ Silent deployment - no user interaction required
+# ✅ Installs auto-recording service with notifications
+# ✅ Creates desktop shortcuts for easy start/stop recording
+# ✅ Enables WebSocket API for graceful recording control
+# ✅ Prevents Safe Mode prompts with --disable-shutdown-check
+# ✅ Uses internal display automatically (laptop optimization)
 # ✅ Auto-elevates for admin rights (seamless experience)
-# ✅ Complete enterprise setup with plugins in ~5 minutes
+# ✅ Complete zero-touch enterprise setup in ~3 minutes
 ```
 
 ### **🔴 Encoder Overload Prevention**
@@ -760,12 +762,13 @@ After installing with `-InstallOpenVINO`, follow these steps:
 | `-ExternalDisplay` | Switch | Use external monitor | Dual display setups |
 | `-CustomDisplay` | String | Custom resolution (1920x1080) | Specific resolution |
 
-### **🔌 Plugin Parameters (NEW)**
+### **🔌 Plugin Parameters (Default: Auto-Install)**
 
 | Parameter | Type | Description | Features |
 |-----------|------|-------------|----------|
-| `-InstallInputOverlay` | Switch | Input visualization plugin | Keyboard/mouse/gamepad overlays, custom input history template |
-| `-InstallOpenVINO` | Switch | Intel AI webcam effects | Background removal, face mesh, smart framing |
+| `-SkipInputOverlay` | Switch | Skip Input Overlay plugin (default: auto-installs) | Keyboard/mouse/gamepad overlays, custom input history template |
+| `-SkipOpenVINO` | Switch | Skip OpenVINO plugins (default: auto-installs on Intel) | Background removal, face mesh, smart framing |
+| `-DisableWebSocket` | Switch | Disable WebSocket API (for restricted networks) | Reduces shutdown reliability but works in secure environments |
 
 ### **Enterprise Parameters**
 

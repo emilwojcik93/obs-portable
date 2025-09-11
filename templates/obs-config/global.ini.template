@@ -24,9 +24,9 @@ cx=720
 cy=580
 
 [OBSWebSocket]
-ServerEnabled=true
+ServerEnabled={{WEBSOCKET_ENABLED}}
 ServerPort=4455
 AuthRequired=false
 ServerPassword=
-AlertsEnabled=true
+AlertsEnabled={{WEBSOCKET_ENABLED}}
 DebugEnabled=false

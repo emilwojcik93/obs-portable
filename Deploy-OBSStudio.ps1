@@ -123,11 +123,11 @@ param(
     [ValidatePattern('^\d+x\d+$')]
     [string]$CustomDisplay,
 
-    [Parameter(HelpMessage = 'Install Input Overlay plugin with presets')]
-    [switch]$InstallInputOverlay,
+    [Parameter(HelpMessage = 'Skip Input Overlay plugin installation (default: installs automatically)')]
+    [switch]$SkipInputOverlay,
 
-    [Parameter(HelpMessage = 'Install OpenVINO plugins for Intel hardware acceleration (webcam effects)')]
-    [switch]$InstallOpenVINO,
+    [Parameter(HelpMessage = 'Skip OpenVINO plugins installation (default: installs automatically on compatible Intel hardware)')]
+    [switch]$SkipOpenVINO,
 
     [Parameter(HelpMessage = 'Validate OBS configuration after deployment (default: true)')]
     [bool]$ValidateConfiguration = $true,
@@ -145,7 +145,10 @@ param(
     [switch]$SilentDeployment,
 
     [Parameter(HelpMessage = 'Create desktop shortcuts for start recording and stop recording')]
-    [switch]$CreateDesktopShortcuts
+    [switch]$CreateDesktopShortcuts,
+
+    [Parameter(HelpMessage = 'Disable WebSocket API for restricted networks (reduces shutdown reliability)')]
+    [switch]$DisableWebSocket
 )
 
 $ErrorActionPreference = 'Stop'
@@ -165,7 +168,7 @@ if (-not $InstallPath -or $InstallPath -eq '-' -or $InstallPath -eq '') {
 
 # Detect if running in elevated session (to prevent window closure)
 $script:IsElevatedSession = $false
-$script:RequiresElevation = $InstallAutoRecording -or $InstallInputOverlay -or $InstallOpenVINO -or $CreateDesktopShortcuts
+$script:RequiresElevation = $InstallAutoRecording -or (-not $SkipInputOverlay) -or (-not $SkipOpenVINO) -or $CreateDesktopShortcuts
 
 # Auto-elevation for admin required operations (inspired by winutil)
 if ($script:RequiresElevation) {
@@ -2052,6 +2055,7 @@ function New-OBSConfigurationTemplate {
             'MIC_AUDIO_UUID'      = [System.Guid]::NewGuid()
             'SCENE_UUID'          = [System.Guid]::NewGuid()
             'DISPLAY_SOURCE_UUID' = [System.Guid]::NewGuid()
+            'WEBSOCKET_ENABLED'   = if ($DisableWebSocket) { 'false' } else { 'true' }
         }
 
         # Process basic.ini template
@@ -2549,11 +2553,11 @@ function Start-OBSFirstTime {
         Write-Host "   - Click '+' in Sources, add 'Audio Output Capture'" -ForegroundColor White
 
         # Show plugin setup instructions if plugins are being installed
-        if ($InstallInputOverlay -or $InstallOpenVINO) {
+        if ((-not $SkipInputOverlay) -or (-not $SkipOpenVINO)) {
             Write-Host ''
             Write-Host 'Plugin Setup (After Auto-Configuration):' -ForegroundColor Magenta
 
-            if ($InstallInputOverlay) {
+            if (-not $SkipInputOverlay) {
                 Write-Host '7. Setup Input Overlay (Keyboard/Mouse Visualization)' -ForegroundColor Yellow
                 Write-Host '   - Tools > input-overlay-settings > WebSocket Server > Enable checkbox' -ForegroundColor White
                 Write-Host '   - Add Browser Source > Local File > Browse to:' -ForegroundColor White
@@ -2561,7 +2565,7 @@ function Start-OBSFirstTime {
                 Write-Host '   - Set Width: 280, Height: 400' -ForegroundColor White
             }
 
-            if ($InstallOpenVINO) {
+            if (-not $SkipOpenVINO) {
                 Write-Host '8. Setup OpenVINO Webcam Effects (Intel Hardware)' -ForegroundColor Yellow
                 Write-Host '   - Add Source > Video Capture Device > Choose camera > OK' -ForegroundColor White
                 Write-Host '   - Right-click webcam source > Filters > Add > OpenVINO Background Concealment' -ForegroundColor White
@@ -2574,7 +2578,7 @@ function Start-OBSFirstTime {
         Start-Sleep -Seconds 2
 
         Push-Location (Join-Path $InstallPath 'bin\64bit')
-        $obsProcess = Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable') -PassThru
+        $obsProcess = Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--disable-shutdown-check') -PassThru
         Pop-Location
 
         Write-Success 'OBS Studio launched - complete setup and close OBS to continue'
@@ -2985,7 +2989,7 @@ function New-DesktopShortcuts {
         $startShortcutPath = Join-Path $desktopPath 'Start OBS Recording.lnk'
         $startShortcut = $shell.CreateShortcut($startShortcutPath)
         $startShortcut.TargetPath = 'powershell.exe'
-        $startShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -Command `"Push-Location '$InstallPath\bin\64bit'; Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray') -WorkingDirectory '$InstallPath\bin\64bit'; Pop-Location`""
+        $startShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -Command `"Push-Location '$InstallPath\bin\64bit'; Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray', '--disable-shutdown-check') -WorkingDirectory '$InstallPath\bin\64bit'; Pop-Location`""
         $startShortcut.WorkingDirectory = "$InstallPath\bin\64bit"
         $startShortcut.Description = 'Start OBS Studio recording minimized to system tray'
         $startShortcut.IconLocation = "$InstallPath\bin\64bit\obs64.exe,0"
@@ -3002,18 +3006,24 @@ if ($obs) {
     try {
         Write-Host "Found OBS process, attempting graceful shutdown..." -ForegroundColor Cyan
 
-        # Method 1: Try WebSocket API for cleanest shutdown (if available)
+        # Method 1: Try WebSocket API for cleanest shutdown (if enabled)
         try {
-            # Simple WebSocket request to stop recording (OBS WebSocket default port 4455)
+            # Check if WebSocket is enabled and available (OBS WebSocket default port 4455)
             $webSocketAvailable = $false
-            try {
-                $tcpClient = New-Object System.Net.Sockets.TcpClient
-                $tcpClient.Connect("localhost", 4455)
-                $webSocketAvailable = $true
-                $tcpClient.Close()
-                Write-Host "WebSocket server detected, attempting clean stop..." -ForegroundColor Green
-            } catch {
-                Write-Host "WebSocket not available, using alternative methods..." -ForegroundColor Yellow
+            $webSocketEnabled = $true  # Default enabled unless explicitly disabled
+            
+            if ($webSocketEnabled) {
+                try {
+                    $tcpClient = New-Object System.Net.Sockets.TcpClient
+                    $tcpClient.Connect("localhost", 4455)
+                    $webSocketAvailable = $true
+                    $tcpClient.Close()
+                    Write-Host "WebSocket server detected, attempting clean stop..." -ForegroundColor Green
+                } catch {
+                    Write-Host "WebSocket not available, using alternative methods..." -ForegroundColor Yellow
+                }
+            } else {
+                Write-Host "WebSocket disabled for restricted networks, using alternative methods..." -ForegroundColor Yellow
             }
 
             if ($webSocketAvailable) {
@@ -3056,7 +3066,7 @@ if ($obs) {
         Write-Host "Attempting graceful window close..." -ForegroundColor Cyan
         $closeResult = $obs.CloseMainWindow()
         Write-Host "CloseMainWindow result: $closeResult" -ForegroundColor Gray
-        
+
         # Wait longer for graceful shutdown (OBS needs time to finalize recordings)
         $shutdownTimeout = 20000  # 20 seconds for large files
         if ($obs.WaitForExit($shutdownTimeout)) {
@@ -3073,7 +3083,7 @@ if ($obs) {
                 Write-Host "Force termination failed: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
-        
+
         # Method 5: Clean up any remaining OBS processes (comprehensive cleanup)
         Start-Sleep 2
         $allOBSProcesses = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
@@ -3089,7 +3099,7 @@ if ($obs) {
                 }
             }
         }
-        
+
         # Final verification
         $finalCheck = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
         if (-not $finalCheck) {
@@ -3201,7 +3211,7 @@ function Start-RecordingWithAutoStop {
         try {
             # Change to the executable directory (critical for OBS to work properly)
             Push-Location $obsExeDir
-            $args = @("--portable", "--startrecording", "--minimize-to-tray")
+            $args = @("--portable", "--startrecording", "--minimize-to-tray", "--disable-shutdown-check")
             Start-Process -FilePath ".\obs64.exe" -ArgumentList $args -WorkingDirectory $obsExeDir -WindowStyle Minimized
             Write-ServiceLog "OBS started successfully from working directory: $obsExeDir"
 
@@ -3719,8 +3729,8 @@ try {
     # Step 2.5: Install plugins if requested (only if OBS installation succeeded)
     $pluginInstallSuccess = $true
 
-    # Install VCRedist if any plugins are requested
-    if ($InstallInputOverlay -or $InstallOpenVINO) {
+    # Install VCRedist if any plugins will be installed (default behavior)
+    if ((-not $SkipInputOverlay) -or (-not $SkipOpenVINO)) {
         Write-Info ''
         Write-Info '=== Installing Plugin Dependencies ==='
         $vcRedistSuccess = Install-VCRedist
@@ -3729,8 +3739,8 @@ try {
         }
     }
 
-    # Install Input Overlay plugin
-    if ($InstallInputOverlay) {
+    # Install Input Overlay plugin (default behavior unless skipped)
+    if (-not $SkipInputOverlay) {
         Write-Info ''
         Write-Info '=== Installing Input Overlay Plugin ==='
         $inputOverlaySuccess = Install-InputOverlayPlugin -InstallPath $InstallPath
@@ -3739,8 +3749,8 @@ try {
         }
     }
 
-    # Install OpenVINO plugin for Intel CPUs
-    if ($InstallOpenVINO) {
+    # Install OpenVINO plugin for Intel CPUs (default behavior unless skipped)
+    if (-not $SkipOpenVINO) {
         Write-Info ''
         Write-Info '=== Installing OpenVINO Plugins ==='
 
@@ -3836,10 +3846,10 @@ try {
             Write-Info "Output: $($systemConfig.OneDrive.Path)"
 
             # Show plugin installation status
-            if ($InstallInputOverlay -or $InstallOpenVINO) {
+            if ((-not $SkipInputOverlay) -or (-not $SkipOpenVINO)) {
                 Write-Info ''
                 Write-Info 'Installed Plugins:'
-                if ($InstallInputOverlay) {
+                if (-not $SkipInputOverlay) {
                     Write-Info '  + Input Overlay: Keyboard/mouse/gamepad visualization'
                     Write-Info "    Presets: $InstallPath\data\input-overlay-presets\"
                     Write-Info ''
@@ -3849,7 +3859,7 @@ try {
                     Write-Info "       $InstallPath\data\input-overlay-presets\input-history-windows\custom-input-history.html"
                     Write-Info '    3. Set Width: 280, Height: 400'
                 }
-                if ($InstallOpenVINO) {
+                if (-not $SkipOpenVINO) {
                     Write-Info '  + OpenVINO: AI-powered webcam effects (Intel hardware)'
                     Write-Info '    Filters: Background Concealment, Face Mesh, Smart Framing'
                     Write-Info ''
