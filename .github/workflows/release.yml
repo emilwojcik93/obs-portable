@@ -36,30 +36,30 @@ jobs:
             } else {
               $major = 3; $minor = 0; $patch = 0
             }
-            
+
             # Check if there are commits since last tag
             $commitsSinceTag = git rev-list --count HEAD ^$latestTag 2>$null
             if ($commitsSinceTag -gt 0) {
               $patch++  # Increment patch version for new commits
             }
-            
+
             $version = "$major.$minor.$patch"
           } catch {
             # Fallback version if git operations fail
             $version = "3.1.0"
           }
-          
+
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-          
+
           # Generate release notes from template
           $recentCommits = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
           $commitList = $recentCommits -join "`n- "
-          
+
           # Use release notes template file
           $templateContent = Get-Content ".github/templates/release-notes.md" -Raw
           $releaseNotes = $templateContent -replace '\{\{VERSION\}\}', $version
           $releaseNotes = $releaseNotes -replace '\{\{RECENT_COMMITS\}\}', "- $commitList"
-          
+
           echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
           echo $releaseNotes >> $env:GITHUB_OUTPUT
           echo "EOF" >> $env:GITHUB_OUTPUT
