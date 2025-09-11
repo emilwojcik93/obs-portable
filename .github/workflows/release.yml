@@ -31,7 +31,7 @@ jobs:
              $latestTag = git describe --tags --abbrev=0 2>$null
              if ($latestTag -match '^v?(\d+)\.(\d+)(?:\.(\d+))?') {
                $major = [int]$matches[1]
-               $minor = [int]$matches[2]
+               $minor = [int]$matches[2] 
                $patch = if ($matches[3]) { [int]$matches[3] } else { 0 }
              } else {
                $major = 3; $minor = 0; $patch = 0
@@ -51,34 +51,14 @@ jobs:
            
            echo "VERSION=$version" >> $env:GITHUB_OUTPUT
            
-           # Generate simple release notes from recent commits
-           $commitMessages = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
-           $releaseNotes = @"
-# OBS Studio Infrastructure as Code v$version
-
-## Complete Enterprise-Ready Deployment Solution
-
-### TLDR - Perfect One Command Setup
-``````powershell
-# Complete zero-touch enterprise setup (run in Terminal as Admin)
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -InternalDisplay -PerformanceMode 50 -SilentDeployment -InstallAutoRecording -CreateDesktopShortcuts
-``````
-
-### Key Features
-- Zero-Configuration Display Capture with auto-setup
-- Default plugin installation (Input Overlay + OpenVINO on Intel)
-- Template-based script system for maintainability
-- WebSocket API enabled by default (optional for restricted networks)
-- Desktop shortcuts with balloon notifications
-- Prevents Safe Mode prompts with --disable-shutdown-check
-- Enterprise auto-recording service with protection
-- Complete process cleanup and graceful shutdown
-
-### Recent Improvements
-$($commitMessages -join "`n")
-
-Perfect for enterprise deployment with zero user interaction required!
-"@
+           # Generate release notes from template
+           $recentCommits = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
+           $commitList = $recentCommits -join "`n- "
+           
+           # Use release notes template
+           $templateContent = Get-Content ".github/templates/release-notes.md" -Raw
+           $releaseNotes = $templateContent -replace '\{\{VERSION\}\}', $version
+           $releaseNotes = $releaseNotes -replace '\{\{RECENT_COMMITS\}\}', "- $commitList"
            
            echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
            echo $releaseNotes >> $env:GITHUB_OUTPUT

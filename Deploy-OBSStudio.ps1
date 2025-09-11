@@ -209,13 +209,13 @@ if ($script:RequiresElevation) {
             # Remote execution
             "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')"
         }
-        
+
         $wrapperParams = @{
-            'WORKING_DIRECTORY' = $PWD.Path
-            'EXECUTION_COMMAND' = $executionCommand
+            'WORKING_DIRECTORY'   = $PWD.Path
+            'EXECUTION_COMMAND'   = $executionCommand
             'WRAPPER_SCRIPT_PATH' = $wrapperScript
         }
-        
+
         $wrapperContent = Get-ScriptTemplate -TemplateName 'OBSElevatedWrapper.ps1.template' -Parameters $wrapperParams
 
         # Write wrapper script and ensure it exists
@@ -3067,10 +3067,10 @@ function Install-AutoRecordingService {
     try {
         # Create service script from template
         $serviceParams = @{
-            'INSTALL_PATH' = $InstallPath
+            'INSTALL_PATH'  = $InstallPath
             'ONEDRIVE_PATH' = $OneDrivePath
         }
-        
+
         $serviceScript = Get-ScriptTemplate -TemplateName 'OBSAutoRecord.ps1.template' -Parameters $serviceParams
 
         $serviceScriptPath = Join-Path $InstallPath 'OBSAutoRecord.ps1'
@@ -3107,7 +3107,7 @@ function Install-AutoRecordingService {
         $shutdownHandlerParams = @{
             'SERVICE_SCRIPT_PATH' = $serviceScriptPath
         }
-        
+
         $shutdownHandler = Get-ScriptTemplate -TemplateName 'OBSShutdownHandler.ps1.template' -Parameters $shutdownHandlerParams
         $shutdownHandlerPath = Join-Path $InstallPath 'OBSShutdownHandler.ps1'
         Set-Content -Path $shutdownHandlerPath -Value $shutdownHandler -Encoding UTF8
