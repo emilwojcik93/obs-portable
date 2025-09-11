@@ -176,14 +176,14 @@ if ($script:RequiresElevation) {
 
         # Build argument list preserving all parameters
         $argList = @()
-        
+
         # Always include InstallPath to ensure it's not lost during elevation
         $argList += "-InstallPath '$InstallPath'"
-        
+
         $PSBoundParameters.GetEnumerator() | ForEach-Object {
             # Skip InstallPath since we already added it above
             if ($_.Key -eq 'InstallPath') { return }
-            
+
             $argList += if ($_.Value -is [switch] -and $_.Value) {
                 "-$($_.Key)"
             } elseif ($_.Value -is [array]) {
@@ -1968,7 +1968,7 @@ function New-OBSConfigurationTemplate {
     Write-Info '=== Creating OBS Configuration from Templates ==='
 
     try {
-        # Get script directory for template path
+        # Get script directory for template path or create temporary directory for remote execution
         $scriptPath = if ($MyInvocation.ScriptName) {
             Split-Path -Parent $MyInvocation.ScriptName
         } else {
@@ -1976,9 +1976,32 @@ function New-OBSConfigurationTemplate {
         }
         $templatePath = Join-Path $scriptPath 'templates\obs-config'
 
-        # Verify and validate templates
+        # If templates not found locally (remote execution), download them
         if (-not (Test-Path $templatePath)) {
-            throw "Template directory not found: $templatePath"
+            Write-Info "Templates not found locally, downloading from release assets..."
+            $tempTemplatesPath = Join-Path ${env:TEMP} "obs-templates-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+            New-Item -Path $tempTemplatesPath -ItemType Directory -Force | Out-Null
+            
+            $templateFiles = @(
+                'basic.ini.template',
+                'user.ini.template', 
+                'global.ini.template',
+                'scene.json.template'
+            )
+            
+            foreach ($templateFile in $templateFiles) {
+                $templateUrl = "https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/obs-config/$templateFile"
+                $templateDestPath = Join-Path $tempTemplatesPath $templateFile
+                try {
+                    Invoke-RobustDownload -Uri $templateUrl -OutFile $templateDestPath -Description "template $templateFile" -ShowProgress $false
+                    Write-Verbose "Downloaded template: $templateFile"
+                } catch {
+                    throw "Failed to download template $templateFile`: $($_.Exception.Message)"
+                }
+            }
+            
+            $templatePath = $tempTemplatesPath
+            Write-Success "Templates downloaded to: $templatePath"
         }
 
         # Validate template integrity
@@ -2932,6 +2955,91 @@ function Optimize-OBSConfiguration {
     }
 }
 
+function New-DesktopShortcuts {
+    param(
+        [string]$InstallPath
+    )
+
+    Write-Info '=== Creating Desktop Shortcuts ==='
+
+    try {
+        # Get desktop path using .NET environment variables
+        $desktopPath = [Environment]::GetFolderPath('Desktop')
+        Write-Info "Desktop path: $desktopPath"
+
+        # Create WScript.Shell COM object for shortcuts
+        $shell = New-Object -ComObject WScript.Shell
+
+        # Shortcut 1: Start OBS Recording (minimized to tray)
+        $startShortcutPath = Join-Path $desktopPath 'Start OBS Recording.lnk'
+        $startShortcut = $shell.CreateShortcut($startShortcutPath)
+        $startShortcut.TargetPath = 'powershell.exe'
+        $startShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -Command `"Push-Location '$InstallPath\bin\64bit'; Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray') -WorkingDirectory '$InstallPath\bin\64bit'; Pop-Location`""
+        $startShortcut.WorkingDirectory = "$InstallPath\bin\64bit"
+        $startShortcut.Description = 'Start OBS Studio recording minimized to system tray'
+        $startShortcut.IconLocation = "$InstallPath\bin\64bit\obs64.exe,0"
+        $startShortcut.WindowStyle = 7  # Minimized
+        $startShortcut.Save()
+        Write-Success 'Created: Start OBS Recording.lnk'
+
+        # Create a helper script for graceful OBS shutdown
+        $shutdownHelperPath = Join-Path $InstallPath 'StopOBSGracefully.ps1'
+        $shutdownHelperScript = @'
+# Graceful OBS shutdown script
+$obs = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+if ($obs) {
+    try {
+        # Method 1: Try to use OBS command line to stop recording
+        Push-Location (Split-Path $obs.Path)
+        Start-Process -FilePath ".\obs64.exe" -ArgumentList @("--portable", "--stoprecording") -WindowStyle Hidden -Wait -TimeoutSec 5
+        Start-Sleep 2
+
+        # Method 2: Graceful window close
+        $obs.CloseMainWindow()
+        if ($obs.WaitForExit(10000)) {
+            Write-Host "OBS closed gracefully" -ForegroundColor Green
+        } else {
+            # Method 3: Force terminate as last resort
+            $obs.Kill()
+            $obs.WaitForExit(5000)
+            Write-Host "OBS force closed" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Error during OBS shutdown: $($_.Exception.Message)" -ForegroundColor Red
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Host "OBS not running" -ForegroundColor Gray
+}
+'@
+        Set-Content -Path $shutdownHelperPath -Value $shutdownHelperScript -Encoding UTF8
+
+        # Shortcut 2: Stop Recording and Close OBS (using helper script)
+        $stopShortcutPath = Join-Path $desktopPath 'Stop OBS Recording.lnk'
+        $stopShortcut = $shell.CreateShortcut($stopShortcutPath)
+        $stopShortcut.TargetPath = 'powershell.exe'
+        $stopShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$shutdownHelperPath`""
+        $stopShortcut.WorkingDirectory = "$InstallPath\bin\64bit"
+        $stopShortcut.Description = 'Stop OBS Studio recording and close application gracefully'
+        $stopShortcut.IconLocation = "$InstallPath\bin\64bit\obs64.exe,0"
+        $stopShortcut.WindowStyle = 7  # Minimized
+        $stopShortcut.Save()
+        Write-Success 'Created: Stop OBS Recording.lnk'
+
+        Write-Success 'Desktop shortcuts created successfully!'
+        Write-Info 'Available shortcuts:'
+        Write-Info '  - Start OBS Recording.lnk: Starts OBS minimized to tray with recording'
+        Write-Info '  - Stop OBS Recording.lnk: Stops recording and closes OBS gracefully'
+
+        return $true
+
+    } catch {
+        Write-Error "Failed to create desktop shortcuts: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Install-AutoRecordingService {
     param(
         [string]$InstallPath,
@@ -3380,6 +3488,32 @@ try {
             # schtasks fallback failed, but that's okay
         }
 
+        # Remove desktop shortcuts
+        Write-Info 'Removing desktop shortcuts...'
+        try {
+            $desktopPath = [Environment]::GetFolderPath('Desktop')
+            $shortcuts = @(
+                'Start OBS Recording.lnk',
+                'Stop OBS Recording.lnk'
+            )
+            
+            $removedShortcuts = 0
+            foreach ($shortcut in $shortcuts) {
+                $shortcutPath = Join-Path $desktopPath $shortcut
+                if (Test-Path $shortcutPath) {
+                    Remove-Item $shortcutPath -Force -ErrorAction Stop
+                    Write-Success "  - Removed: $shortcut"
+                    $removedShortcuts++
+                }
+            }
+            
+            if ($removedShortcuts -gt 0) {
+                $cleanupItems += "Removed $removedShortcuts desktop shortcut(s)"
+            }
+        } catch {
+            Write-Warning "  - Failed to remove desktop shortcuts: $($_.Exception.Message)"
+        }
+
         # Remove OBS installation
         if (Test-Path $InstallPath) {
             Write-Info 'Removing OBS installation...'
@@ -3563,19 +3697,18 @@ try {
         }
 
         if ($optimizeSuccess) {
-            # Step 5: Install scheduled tasks if requested
-            if ($InstallScheduledTasks) {
+            # Step 5: Install auto-recording service if requested
+            if ($InstallAutoRecording) {
                 if (-not (Test-AdminRights)) {
                     # Build the current command with admin-required parameter
                     $currentParams = @()
                     if ($Force) { $currentParams += '-Force' }
-                    if ($EnableNotifications) { $currentParams += '-EnableNotifications' }
                     if ($VerboseLogging) { $currentParams += '-VerboseLogging' }
-                    if ($OptimizedCompression) { $currentParams += '-OptimizedCompression' }
                     if ($InternalDisplay) { $currentParams += '-InternalDisplay' }
                     if ($ExternalDisplay) { $currentParams += '-ExternalDisplay' }
                     if ($CustomDisplay) { $currentParams += "-CustomDisplay `"$CustomDisplay`"" }
-                    $currentParams += '-InstallScheduledTasks'
+                    if ($CreateDesktopShortcuts) { $currentParams += '-CreateDesktopShortcuts' }
+                    $currentParams += '-InstallAutoRecording'
 
                     $adminCommand = ".\Deploy-OBSStudio.ps1 $($currentParams -join ' ')"
                     Show-AdminCommand -CurrentCommand $adminCommand
@@ -3590,7 +3723,12 @@ try {
                 $serviceInstalled = $false
             }
 
-            # Step 6: Show completion
+            # Step 6: Create desktop shortcuts if requested
+            if ($CreateDesktopShortcuts) {
+                $shortcutSuccess = New-DesktopShortcuts -InstallPath $InstallPath
+            }
+
+            # Step 7: Show completion
             Show-BalloonNotification -Message 'OBS deployment completed successfully!' -Type 'Info'
 
             Write-Success ''
