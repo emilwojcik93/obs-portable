@@ -202,53 +202,21 @@ if ($script:RequiresElevation) {
         # Create temporary wrapper script to avoid command parsing issues
         $wrapperScript = "${env:TEMP}\OBS-Elevated-Wrapper-$(Get-Date -Format 'yyyyMMdd-HHmmss').ps1"
 
-        $wrapperContent = if ($PSCommandPath) {
+        $executionCommand = if ($PSCommandPath) {
             # Local execution
-            @"
-try {
-    Set-Location '$PWD'
-    & '$($PSCommandPath)' $($argList -join ' ')
-    `$exitCode = `$LASTEXITCODE
-} catch {
-    Write-Error `$_.Exception.Message
-    `$exitCode = 1
-}
-Write-Host ''
-Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
-if (`$exitCode -eq 0) {
-    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
-} else {
-    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
-}
-Write-Host ''
-Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
-`$null = Read-Host
-Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
-"@
+            "& '$($PSCommandPath)' $($argList -join ' ')"
         } else {
             # Remote execution
-            @"
-try {
-    Set-Location '$PWD'
-    &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
-    `$exitCode = `$LASTEXITCODE
-} catch {
-    Write-Error `$_.Exception.Message
-    `$exitCode = 1
-}
-Write-Host ''
-Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
-if (`$exitCode -eq 0) {
-    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
-} else {
-    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
-}
-Write-Host ''
-Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
-`$null = Read-Host
-Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
-"@
+            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')"
         }
+        
+        $wrapperParams = @{
+            'WORKING_DIRECTORY' = $PWD.Path
+            'EXECUTION_COMMAND' = $executionCommand
+            'WRAPPER_SCRIPT_PATH' = $wrapperScript
+        }
+        
+        $wrapperContent = Get-ScriptTemplate -TemplateName 'OBSElevatedWrapper.ps1.template' -Parameters $wrapperParams
 
         # Write wrapper script and ensure it exists
         try {
@@ -3047,11 +3015,11 @@ function New-DesktopShortcuts {
 
         # Create graceful shutdown script from template
         $shutdownHelperPath = Join-Path $InstallPath 'StopOBSGracefully.ps1'
-        
+
         $shutdownParams = @{
             'WEBSOCKET_ENABLED' = if ($DisableWebSocket) { 'false' } else { 'true' }
         }
-        
+
         $shutdownHelperScript = Get-ScriptTemplate -TemplateName 'StopOBSGracefully.ps1.template' -Parameters $shutdownParams
         Set-Content -Path $shutdownHelperPath -Value $shutdownHelperScript -Encoding UTF8
 
@@ -3097,132 +3065,13 @@ function Install-AutoRecordingService {
     }
 
     try {
-        # Create service script with proper working directory handling
-        $serviceScript = @'
-param([string]$Action = "Start")
-
-function Write-ServiceLog {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logPath = "${env:TEMP}\OBSAutoRecord.log"
-    Add-Content -Path $logPath -Value "[$timestamp] $Message" -ErrorAction SilentlyContinue
-}
-
-function Stop-OBSRecordingSafely {
-    Write-ServiceLog "Stopping OBS recording safely..."
-    $obsProcesses = Get-Process -Name "obs64" -ErrorAction SilentlyContinue
-
-    if ($obsProcesses) {
-        foreach ($proc in $obsProcesses) {
-            try {
-                Write-ServiceLog "Attempting graceful shutdown of OBS process $($proc.Id)"
-                $proc.CloseMainWindow()
-
-                if (-not $proc.WaitForExit(20000)) {
-                    Write-ServiceLog "Graceful shutdown failed, forcing termination"
-                    $proc.Kill()
-                    $proc.WaitForExit(5000)
-                }
-                Write-ServiceLog "OBS process terminated successfully"
-            } catch {
-                Write-ServiceLog "Error stopping OBS: $($_.Exception.Message)"
-            }
+        # Create service script from template
+        $serviceParams = @{
+            'INSTALL_PATH' = $InstallPath
+            'ONEDRIVE_PATH' = $OneDrivePath
         }
-    } else {
-        Write-ServiceLog "No OBS processes found"
-    }
-}
-
-function Start-RecordingWithAutoStop {
-    param([string]$OBSPath, [string]$OutputPath)
-
-    Write-ServiceLog "Starting OBS recording with auto-stop"
-
-    # Start OBS from the correct working directory (same level as exe)
-    $obsExeDir = Join-Path $OBSPath "bin\64bit"
-    $obsExe = Join-Path $obsExeDir "obs64.exe"
-
-    if (Test-Path $obsExe) {
-        try {
-            # Change to the executable directory (critical for OBS to work properly)
-            Push-Location $obsExeDir
-            $args = @("--portable", "--startrecording", "--minimize-to-tray", "--disable-shutdown-check")
-            Start-Process -FilePath ".\obs64.exe" -ArgumentList $args -WorkingDirectory $obsExeDir -WindowStyle Minimized
-            Write-ServiceLog "OBS started successfully from working directory: $obsExeDir"
-
-            # Start background auto-stop timer (no scheduled task needed)
-            Start-Job -ScriptBlock {
-                param($ServiceScriptPath, $LogPath)
-                Start-Sleep -Seconds (2 * 60 * 60)  # 2 hours
-                Add-Content -Path $LogPath -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Auto-stop timer triggered after 2 hours"
-                & $ServiceScriptPath -Action AutoStop
-            } -ArgumentList $PSCommandPath, "${env:TEMP}\OBSAutoRecord.log" | Out-Null
-
-            Write-ServiceLog "Auto-stop timer started for 2 hours (background job)"
-        } finally {
-            Pop-Location
-        }
-    } else {
-        Write-ServiceLog "OBS executable not found at $obsExe"
-    }
-}
-
-function Show-ServiceNotification {
-    param([string]$Message, [string]$Type = "Info")
-
-    try {
-        Add-Type -AssemblyName System.Windows.Forms
-        $notification = New-Object System.Windows.Forms.NotifyIcon
-        $notification.Icon = [System.Drawing.SystemIcons]::Information
-        $notification.BalloonTipIcon = $Type
-        $notification.BalloonTipText = $Message
-        $notification.BalloonTipTitle = "OBS Recording"
-        $notification.Visible = $true
-        $notification.ShowBalloonTip(5000)
-
-        Start-Sleep -Seconds 1
-        $notification.Dispose()
-    } catch {
-        # Fallback to popup
-        try {
-            (New-Object -ComObject WScript.Shell).Popup($Message, 3, "OBS Recording", 64) | Out-Null
-        } catch {
-            Write-ServiceLog "Failed to show notification: $Message"
-        }
-    }
-}
-
-# Main service logic
-switch ($Action) {
-    "Start" {
-        Write-ServiceLog "=== Starting Auto-Recording Service ==="
-        Start-RecordingWithAutoStop -OBSPath "INSTALL_PATH_PLACEHOLDER" -OutputPath "ONEDRIVE_PATH_PLACEHOLDER"
-        Show-ServiceNotification -Message "Recording started automatically" -Type "Info"
-    }
-    "Stop" {
-        Write-ServiceLog "=== Stopping Auto-Recording Service ==="
-        Stop-OBSRecordingSafely
-        Show-ServiceNotification -Message "Recording stopped" -Type "Info"
-        # Clean up any background auto-stop jobs
-        Get-Job | Where-Object { $_.State -eq "Running" } | Stop-Job -ErrorAction SilentlyContinue
-        Get-Job | Remove-Job -ErrorAction SilentlyContinue
-    }
-    "Shutdown" {
-        Write-ServiceLog "=== System Shutdown - Emergency Stop ==="
-        Stop-OBSRecordingSafely
-        Show-ServiceNotification -Message "Recording stopped for shutdown" -Type "Warning"
-    }
-    "AutoStop" {
-        Write-ServiceLog "=== Auto-Stop Triggered (2h limit) ==="
-        Stop-OBSRecordingSafely
-        Show-ServiceNotification -Message "Recording auto-stopped (2h limit)" -Type "Warning"
-    }
-}
-'@
-
-        # Replace placeholders
-        $serviceScript = $serviceScript.Replace('INSTALL_PATH_PLACEHOLDER', $InstallPath)
-        $serviceScript = $serviceScript.Replace('ONEDRIVE_PATH_PLACEHOLDER', $OneDrivePath)
+        
+        $serviceScript = Get-ScriptTemplate -TemplateName 'OBSAutoRecord.ps1.template' -Parameters $serviceParams
 
         $serviceScriptPath = Join-Path $InstallPath 'OBSAutoRecord.ps1'
         Set-Content -Path $serviceScriptPath -Value $serviceScript -Encoding UTF8
@@ -3254,28 +3103,12 @@ switch ($Action) {
             Register-ScheduledTask -TaskName $fullTaskName -Description $task.Description -Trigger $task.Trigger -Action $task.Action -RunLevel Highest -Force | Out-Null
         }
 
-        # Create a shutdown handler script
-        $shutdownHandler = @"
-# OBS Shutdown Handler - Registers for system shutdown events
-Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
-    & "$serviceScriptPath" -Action Shutdown
-} | Out-Null
-
-# Keep the script running to monitor for shutdown
-try {
-    while (`$true) {
-        Start-Sleep -Seconds 60
-        # Check if OBS is still running, if not, exit the monitor
-        if (-not (Get-Process -Name "obs64" -ErrorAction SilentlyContinue)) {
-            Start-Sleep -Seconds 300  # Wait 5 minutes before checking again
+        # Create shutdown handler script from template
+        $shutdownHandlerParams = @{
+            'SERVICE_SCRIPT_PATH' = $serviceScriptPath
         }
-    }
-} catch {
-    # If interrupted, ensure OBS is stopped
-    & "$serviceScriptPath" -Action Shutdown
-}
-"@
-
+        
+        $shutdownHandler = Get-ScriptTemplate -TemplateName 'OBSShutdownHandler.ps1.template' -Parameters $shutdownHandlerParams
         $shutdownHandlerPath = Join-Path $InstallPath 'OBSShutdownHandler.ps1'
         Set-Content -Path $shutdownHandlerPath -Value $shutdownHandler -Encoding UTF8
 

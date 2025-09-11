@@ -20,7 +20,7 @@ try {
 $obs = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
 if ($obs) {
     Write-Host "Found OBS process, stopping recording and closing..." -ForegroundColor Cyan
-    
+
     try {
         # Method 1: Quick command line stop (if WebSocket enabled)
         $webSocketEnabled = {{WEBSOCKET_ENABLED}}
@@ -36,12 +36,12 @@ if ($obs) {
                 Pop-Location
             }
         }
-        
+
         # Method 2: Direct force termination (most reliable)
         Write-Host "Force terminating OBS process..." -ForegroundColor Yellow
         $obs.Kill()
         $obs.WaitForExit(5000)
-        
+
         # Clean up any remaining processes
         $allOBSProcesses = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
         foreach ($remainingOBS in $allOBSProcesses) {
@@ -50,9 +50,9 @@ if ($obs) {
                 $remainingOBS.WaitForExit(2000)
             } catch { }
         }
-        
+
         Write-Host "OBS stopped successfully" -ForegroundColor Green
-        
+
         # Show success notification
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -68,10 +68,10 @@ if ($obs) {
         } catch {
             Write-Host "OBS recording stopped successfully" -ForegroundColor Green
         }
-        
+
     } catch {
         Write-Host "Error during OBS shutdown: $($_.Exception.Message)" -ForegroundColor Red
-        
+
         # Show error notification
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -88,7 +88,7 @@ if ($obs) {
     }
 } else {
     Write-Host "OBS not running" -ForegroundColor Gray
-    
+
     # Show info notification
     try {
         Add-Type -AssemblyName System.Windows.Forms

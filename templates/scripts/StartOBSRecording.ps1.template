@@ -22,7 +22,7 @@ try {
     $existingOBS = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
     if ($existingOBS) {
         Write-Host "OBS is already running" -ForegroundColor Yellow
-        
+
         # Show notification
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -36,23 +36,23 @@ try {
             Start-Sleep -Milliseconds 500
             $notification.Dispose()
         } catch { }
-        
+
         return
     }
-    
+
     # Start OBS with recording
     Push-Location '{{INSTALL_PATH}}\bin\64bit'
     Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray', '--disable-shutdown-check') -WorkingDirectory '{{INSTALL_PATH}}\bin\64bit'
     Pop-Location
-    
+
     # Wait a moment for OBS to start
     Start-Sleep 3
-    
+
     # Verify OBS started
     $obsStarted = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
     if ($obsStarted) {
         Write-Host "OBS recording started successfully" -ForegroundColor Green
-        
+
         # Show success notification
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -68,7 +68,7 @@ try {
         } catch { }
     } else {
         Write-Host "Failed to start OBS" -ForegroundColor Red
-        
+
         # Show error notification
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -83,10 +83,10 @@ try {
             $notification.Dispose()
         } catch { }
     }
-    
+
 } catch {
     Write-Host "Error starting OBS: $($_.Exception.Message)" -ForegroundColor Red
-    
+
     # Show error notification
     try {
         Add-Type -AssemblyName System.Windows.Forms

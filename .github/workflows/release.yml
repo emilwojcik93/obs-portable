@@ -21,27 +21,68 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate Release Notes
-        id: release_notes
-        shell: pwsh
-        run: |
-          # Generate release notes and capture output
-          $scriptOutput = powershell -ExecutionPolicy Bypass -File .github/scripts/generate-release-notes.ps1 -ScriptPath "Deploy-OBSStudio.ps1" -TemplateFile ".github/templates/release-notes.md" -OutputFile "RELEASE_NOTES.md"
+       - name: Generate Version and Release Notes
+         id: release_notes
+         shell: pwsh
+         run: |
+           # Dynamic version calculation based on git tags and commits
+           try {
+             # Get latest tag
+             $latestTag = git describe --tags --abbrev=0 2>$null
+             if ($latestTag -match '^v?(\d+)\.(\d+)(?:\.(\d+))?') {
+               $major = [int]$matches[1]
+               $minor = [int]$matches[2]
+               $patch = if ($matches[3]) { [int]$matches[3] } else { 0 }
+             } else {
+               $major = 3; $minor = 0; $patch = 0
+             }
+             
+             # Check if there are commits since last tag
+             $commitsSinceTag = git rev-list --count HEAD ^$latestTag 2>$null
+             if ($commitsSinceTag -gt 0) {
+               $patch++  # Increment patch version for new commits
+             }
+             
+             $version = "$major.$minor.$patch"
+           } catch {
+             # Fallback version if git operations fail
+             $version = "3.1.0"
+           }
+           
+           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+           
+           # Generate simple release notes from recent commits
+           $commitMessages = git log --pretty=format:"%s" -10 | Where-Object { $_ -match "^(🚀|✅|🔧|🛠️|📚|🎯|🔔|⚡|🐛)" }
+           $releaseNotes = @"
+# OBS Studio Infrastructure as Code v$version
 
-          # Extract version from script output
-          $versionMatch = $scriptOutput | Select-String -Pattern "VERSION=(.+)"
-          if ($versionMatch) {
-            $version = $versionMatch.Matches[0].Groups[1].Value
-            echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "VERSION=2.0" >> $env:GITHUB_OUTPUT
-          }
+## Complete Enterprise-Ready Deployment Solution
 
-          # Read generated release notes
-          $releaseNotes = Get-Content "RELEASE_NOTES.md" -Raw
-          echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
-          echo $releaseNotes >> $env:GITHUB_OUTPUT
-          echo "EOF" >> $env:GITHUB_OUTPUT
+### TLDR - Perfect One Command Setup
+``````powershell
+# Complete zero-touch enterprise setup (run in Terminal as Admin)
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -InternalDisplay -PerformanceMode 50 -SilentDeployment -InstallAutoRecording -CreateDesktopShortcuts
+``````
+
+### Key Features
+- Zero-Configuration Display Capture with auto-setup
+- Default plugin installation (Input Overlay + OpenVINO on Intel)
+- Template-based script system for maintainability
+- WebSocket API enabled by default (optional for restricted networks)
+- Desktop shortcuts with balloon notifications
+- Prevents Safe Mode prompts with --disable-shutdown-check
+- Enterprise auto-recording service with protection
+- Complete process cleanup and graceful shutdown
+
+### Recent Improvements
+$($commitMessages -join "`n")
+
+Perfect for enterprise deployment with zero user interaction required!
+"@
+           
+           echo "RELEASE_NOTES<<EOF" >> $env:GITHUB_OUTPUT
+           echo $releaseNotes >> $env:GITHUB_OUTPUT
+           echo "EOF" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
