@@ -244,21 +244,53 @@ if ($script:RequiresElevation) {
         # Create temporary wrapper script to avoid command parsing issues
         $wrapperScript = "${env:TEMP}\OBS-Elevated-Wrapper-$(Get-Date -Format 'yyyyMMdd-HHmmss').ps1"
 
-        $executionCommand = if ($PSCommandPath) {
+        $wrapperContent = if ($PSCommandPath) {
             # Local execution
-            "& '$($PSCommandPath)' $($argList -join ' ')"
+            @"
+try {
+    Set-Location '$PWD'
+    & '$($PSCommandPath)' $($argList -join ' ')
+    `$exitCode = `$LASTEXITCODE
+} catch {
+    Write-Error `$_.Exception.Message
+    `$exitCode = 1
+}
+Write-Host ''
+Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
+if (`$exitCode -eq 0) {
+    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
+}
+Write-Host ''
+Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
+`$null = Read-Host
+Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
+"@
         } else {
             # Remote execution
-            "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')"
+            @"
+try {
+    Set-Location '$PWD'
+    &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
+    `$exitCode = `$LASTEXITCODE
+} catch {
+    Write-Error `$_.Exception.Message
+    `$exitCode = 1
+}
+Write-Host ''
+Write-Host '=== Elevated Session Complete ===' -ForegroundColor Green
+if (`$exitCode -eq 0) {
+    Write-Host 'Deployment completed successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Deployment completed with errors.' -ForegroundColor Yellow
+}
+Write-Host ''
+Write-Host 'Press Enter to close this elevated window...' -ForegroundColor Yellow
+`$null = Read-Host
+Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
+"@
         }
-
-        $wrapperParams = @{
-            'WORKING_DIRECTORY'   = $PWD.Path
-            'EXECUTION_COMMAND'   = $executionCommand
-            'WRAPPER_SCRIPT_PATH' = $wrapperScript
-        }
-
-        $wrapperContent = Get-ScriptTemplate -TemplateName 'OBSElevatedWrapper.ps1.template' -Parameters $wrapperParams
 
         # Write wrapper script and ensure it exists
         try {
