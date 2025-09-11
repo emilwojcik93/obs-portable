@@ -3025,13 +3025,21 @@ function New-DesktopShortcuts {
         # Create WScript.Shell COM object for shortcuts
         $shell = New-Object -ComObject WScript.Shell
 
-        # Shortcut 1: Start OBS Recording (minimized to tray)
+        # Create start recording script from template
+        $startHelperPath = Join-Path $InstallPath 'StartOBSRecording.ps1'
+        $startParams = @{
+            'INSTALL_PATH' = $InstallPath
+        }
+        $startHelperScript = Get-ScriptTemplate -TemplateName 'StartOBSRecording.ps1.template' -Parameters $startParams
+        Set-Content -Path $startHelperPath -Value $startHelperScript -Encoding UTF8
+
+        # Shortcut 1: Start OBS Recording (using helper script)
         $startShortcutPath = Join-Path $desktopPath 'Start OBS Recording.lnk'
         $startShortcut = $shell.CreateShortcut($startShortcutPath)
         $startShortcut.TargetPath = 'powershell.exe'
-        $startShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -Command `"Push-Location '$InstallPath\bin\64bit'; Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray', '--disable-shutdown-check') -WorkingDirectory '$InstallPath\bin\64bit'; Pop-Location`""
+        $startShortcut.Arguments = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$startHelperPath`""
         $startShortcut.WorkingDirectory = "$InstallPath\bin\64bit"
-        $startShortcut.Description = 'Start OBS Studio recording minimized to system tray'
+        $startShortcut.Description = 'Start OBS Studio recording minimized to system tray with notifications'
         $startShortcut.IconLocation = "$InstallPath\bin\64bit\obs64.exe,0"
         $startShortcut.WindowStyle = 7  # Minimized
         $startShortcut.Save()
@@ -3039,11 +3047,11 @@ function New-DesktopShortcuts {
 
         # Create graceful shutdown script from template
         $shutdownHelperPath = Join-Path $InstallPath 'StopOBSGracefully.ps1'
-
+        
         $shutdownParams = @{
-            'WEBSOCKET_ENABLED' = if ($DisableWebSocket) { '$false' } else { '$true' }
+            'WEBSOCKET_ENABLED' = if ($DisableWebSocket) { 'false' } else { 'true' }
         }
-
+        
         $shutdownHelperScript = Get-ScriptTemplate -TemplateName 'StopOBSGracefully.ps1.template' -Parameters $shutdownParams
         Set-Content -Path $shutdownHelperPath -Value $shutdownHelperScript -Encoding UTF8
 
@@ -3061,8 +3069,11 @@ function New-DesktopShortcuts {
 
         Write-Success 'Desktop shortcuts created successfully!'
         Write-Info 'Available shortcuts:'
-        Write-Info '  - Start OBS Recording.lnk: Starts OBS minimized to tray with recording'
-        Write-Info '  - Stop OBS Recording.lnk: Stops recording and closes OBS gracefully'
+        Write-Info '  - Start OBS Recording.lnk: Starts OBS minimized to tray with recording (with notifications)'
+        Write-Info '  - Stop OBS Recording.lnk: Stops recording and closes OBS quickly (with notifications)'
+        Write-Info 'Helper scripts created:'
+        Write-Info "  - StartOBSRecording.ps1: $startHelperPath"
+        Write-Info "  - StopOBSGracefully.ps1: $shutdownHelperPath"
 
         return $true
 

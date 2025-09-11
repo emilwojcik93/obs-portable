@@ -1,0 +1,103 @@
+# Start OBS Recording script with notifications
+param()
+
+# Show notification that recording is starting
+try {
+    Add-Type -AssemblyName System.Windows.Forms
+    $notification = New-Object System.Windows.Forms.NotifyIcon
+    $notification.Icon = [System.Drawing.SystemIcons]::Information
+    $notification.BalloonTipIcon = 'Info'
+    $notification.BalloonTipText = 'Starting OBS recording...'
+    $notification.BalloonTipTitle = 'OBS Recording'
+    $notification.Visible = $true
+    $notification.ShowBalloonTip(3000)
+    Start-Sleep -Milliseconds 500
+    $notification.Dispose()
+} catch {
+    Write-Host "Starting OBS recording..." -ForegroundColor Cyan
+}
+
+try {
+    # Check if OBS is already running
+    $existingOBS = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+    if ($existingOBS) {
+        Write-Host "OBS is already running" -ForegroundColor Yellow
+        
+        # Show notification
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            $notification = New-Object System.Windows.Forms.NotifyIcon
+            $notification.Icon = [System.Drawing.SystemIcons]::Warning
+            $notification.BalloonTipIcon = 'Warning'
+            $notification.BalloonTipText = 'OBS is already running'
+            $notification.BalloonTipTitle = 'OBS Recording'
+            $notification.Visible = $true
+            $notification.ShowBalloonTip(3000)
+            Start-Sleep -Milliseconds 500
+            $notification.Dispose()
+        } catch { }
+        
+        return
+    }
+    
+    # Start OBS with recording
+    Push-Location '{{INSTALL_PATH}}\bin\64bit'
+    Start-Process -FilePath '.\obs64.exe' -ArgumentList @('--portable', '--startrecording', '--minimize-to-tray', '--disable-shutdown-check') -WorkingDirectory '{{INSTALL_PATH}}\bin\64bit'
+    Pop-Location
+    
+    # Wait a moment for OBS to start
+    Start-Sleep 3
+    
+    # Verify OBS started
+    $obsStarted = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+    if ($obsStarted) {
+        Write-Host "OBS recording started successfully" -ForegroundColor Green
+        
+        # Show success notification
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            $notification = New-Object System.Windows.Forms.NotifyIcon
+            $notification.Icon = [System.Drawing.SystemIcons]::Information
+            $notification.BalloonTipIcon = 'Info'
+            $notification.BalloonTipText = 'OBS recording started successfully'
+            $notification.BalloonTipTitle = 'OBS Recording'
+            $notification.Visible = $true
+            $notification.ShowBalloonTip(4000)
+            Start-Sleep -Milliseconds 500
+            $notification.Dispose()
+        } catch { }
+    } else {
+        Write-Host "Failed to start OBS" -ForegroundColor Red
+        
+        # Show error notification
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            $notification = New-Object System.Windows.Forms.NotifyIcon
+            $notification.Icon = [System.Drawing.SystemIcons]::Error
+            $notification.BalloonTipIcon = 'Error'
+            $notification.BalloonTipText = 'Failed to start OBS recording'
+            $notification.BalloonTipTitle = 'OBS Recording'
+            $notification.Visible = $true
+            $notification.ShowBalloonTip(4000)
+            Start-Sleep -Milliseconds 500
+            $notification.Dispose()
+        } catch { }
+    }
+    
+} catch {
+    Write-Host "Error starting OBS: $($_.Exception.Message)" -ForegroundColor Red
+    
+    # Show error notification
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        $notification = New-Object System.Windows.Forms.NotifyIcon
+        $notification.Icon = [System.Drawing.SystemIcons]::Error
+        $notification.BalloonTipIcon = 'Error'
+        $notification.BalloonTipText = "Failed to start OBS: $($_.Exception.Message)"
+        $notification.BalloonTipTitle = 'OBS Recording'
+        $notification.Visible = $true
+        $notification.ShowBalloonTip(4000)
+        Start-Sleep -Milliseconds 500
+        $notification.Dispose()
+    } catch { }
+}
