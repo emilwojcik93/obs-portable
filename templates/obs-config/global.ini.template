@@ -22,3 +22,11 @@ Profiles=../../config
 [PropertiesWindow]
 cx=720
 cy=580
+
+[OBSWebSocket]
+ServerEnabled=true
+ServerPort=4455
+AuthRequired=false
+ServerPassword=
+AlertsEnabled=true
+DebugEnabled=false

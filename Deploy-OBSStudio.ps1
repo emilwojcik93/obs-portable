@@ -1479,11 +1479,11 @@ function Get-SystemConfiguration {
         foreach ($monitor in $monitors) {
             if ($monitor.ScreenWidth -and $monitor.ScreenHeight) {
                 Write-Info "Native Hardware Resolution: $($monitor.ScreenWidth)x$($monitor.ScreenHeight)"
-                
+
                 # Use native resolution if it's higher than current (handles Windows scaling/power saving)
-                if ($monitor.ScreenWidth -gt $config.Display.ActualResolution.Width -or 
+                if ($monitor.ScreenWidth -gt $config.Display.ActualResolution.Width -or
                     $monitor.ScreenHeight -gt $config.Display.ActualResolution.Height) {
-                    Write-Info "Using native resolution for recording (Windows may be scaled/power-saving)"
+                    Write-Info 'Using native resolution for recording (Windows may be scaled/power-saving)'
                     $config.Display.ActualResolution = @{
                         Width  = $monitor.ScreenWidth
                         Height = $monitor.ScreenHeight
@@ -3001,7 +3001,7 @@ $obs = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
 if ($obs) {
     try {
         Write-Host "Found OBS process, attempting graceful shutdown..." -ForegroundColor Cyan
-        
+
         # Method 1: Try WebSocket API for cleanest shutdown (if available)
         try {
             # Simple WebSocket request to stop recording (OBS WebSocket default port 4455)
@@ -3015,7 +3015,7 @@ if ($obs) {
             } catch {
                 Write-Host "WebSocket not available, using alternative methods..." -ForegroundColor Yellow
             }
-            
+
             if ($webSocketAvailable) {
                 # Send stop recording request via WebSocket (basic implementation)
                 $webRequest = @{
@@ -3024,7 +3024,7 @@ if ($obs) {
                     Body = '{"op": 6, "d": {"requestType": "StopRecord"}}'
                     ContentType = "application/json"
                 }
-                
+
                 try {
                     # Simple HTTP request to WebSocket (fallback approach)
                     Invoke-RestMethod -Uri "http://localhost:4455" -Method GET -TimeoutSec 2 -ErrorAction SilentlyContinue
@@ -3037,7 +3037,7 @@ if ($obs) {
         } catch {
             Write-Host "WebSocket method failed, using command line..." -ForegroundColor Yellow
         }
-        
+
         # Method 2: Try OBS command line to stop recording
         try {
             Push-Location (Split-Path $obs.Path)
@@ -3054,7 +3054,8 @@ if ($obs) {
 
         # Method 3: Graceful window close with extended timeout
         Write-Host "Attempting graceful window close..." -ForegroundColor Cyan
-        $obs.CloseMainWindow()
+        $closeResult = $obs.CloseMainWindow()
+        Write-Host "CloseMainWindow result: $closeResult" -ForegroundColor Gray
         
         # Wait longer for graceful shutdown (OBS needs time to finalize recordings)
         $shutdownTimeout = 20000  # 20 seconds for large files
@@ -3063,18 +3064,40 @@ if ($obs) {
         } else {
             Write-Host "Graceful shutdown timeout, force terminating..." -ForegroundColor Yellow
             # Method 4: Force terminate as last resort
-            $obs.Kill()
-            if ($obs.WaitForExit(5000)) {
-                Write-Host "OBS force terminated" -ForegroundColor Red
+            try {
+                $obs.Kill()
+                if ($obs.WaitForExit(5000)) {
+                    Write-Host "OBS force terminated" -ForegroundColor Red
+                }
+            } catch {
+                Write-Host "Force termination failed: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
-        # Verify OBS is completely closed
-        $remainingOBS = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
-        if (-not $remainingOBS) {
-            Write-Host "OBS shutdown completed successfully" -ForegroundColor Green
+        # Method 5: Clean up any remaining OBS processes (comprehensive cleanup)
+        Start-Sleep 2
+        $allOBSProcesses = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+        if ($allOBSProcesses) {
+            Write-Host "Found $($allOBSProcesses.Count) remaining OBS process(es), force cleaning..." -ForegroundColor Yellow
+            foreach ($remainingOBS in $allOBSProcesses) {
+                try {
+                    $remainingOBS.Kill()
+                    $remainingOBS.WaitForExit(3000)
+                    Write-Host "Killed remaining OBS process $($remainingOBS.Id)" -ForegroundColor Yellow
+                } catch {
+                    Write-Host "Failed to kill OBS process $($remainingOBS.Id)" -ForegroundColor Red
+                }
+            }
         }
         
+        # Final verification
+        $finalCheck = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+        if (-not $finalCheck) {
+            Write-Host "OBS shutdown completed successfully - all processes terminated" -ForegroundColor Green
+        } else {
+            Write-Host "Warning: $($finalCheck.Count) OBS process(es) still running" -ForegroundColor Red
+        }
+
     } catch {
         Write-Host "Error during OBS shutdown: $($_.Exception.Message)" -ForegroundColor Red
         # Emergency force close
