@@ -1,5 +1,6 @@
 # OBS Studio Installation and Configuration
 OBS-Studio-Portable/
+-/
 *.obs
 *.ini
 *.json

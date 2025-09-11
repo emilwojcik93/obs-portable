@@ -97,11 +97,8 @@ param(
     [Parameter(HelpMessage = 'Force reinstallation')]
     [switch]$Force,
 
-    [Parameter(HelpMessage = 'Install scheduled tasks for auto-recording (requires admin)')]
-    [switch]$InstallScheduledTasks,
-
-    [Parameter(HelpMessage = 'Enable Windows balloon notifications')]
-    [switch]$EnableNotifications,
+    [Parameter(HelpMessage = 'Install auto-recording service with notifications (requires admin)')]
+    [switch]$InstallAutoRecording,
 
     [Parameter(HelpMessage = 'Remove existing installation and tasks')]
     [switch]$Cleanup,
@@ -145,7 +142,10 @@ param(
     [switch]$TestDisplayMethods,
 
     [Parameter(HelpMessage = 'Deploy OBS silently without Auto-Configuration Wizard (fully unattended)')]
-    [switch]$SilentDeployment
+    [switch]$SilentDeployment,
+
+    [Parameter(HelpMessage = 'Create desktop shortcuts for start recording and stop recording')]
+    [switch]$CreateDesktopShortcuts
 )
 
 $ErrorActionPreference = 'Stop'
@@ -165,7 +165,7 @@ if (-not $InstallPath -or $InstallPath -eq '-' -or $InstallPath -eq '') {
 
 # Detect if running in elevated session (to prevent window closure)
 $script:IsElevatedSession = $false
-$script:RequiresElevation = $InstallScheduledTasks -or $InstallInputOverlay -or $InstallOpenVINO
+$script:RequiresElevation = $InstallAutoRecording -or $InstallInputOverlay -or $InstallOpenVINO -or $CreateDesktopShortcuts
 
 # Auto-elevation for admin required operations (inspired by winutil)
 if ($script:RequiresElevation) {
@@ -443,7 +443,7 @@ function Show-BalloonNotification {
         [int]$Duration = 5000
     )
 
-    if (-not $EnableNotifications -and -not $TestNotifications) { return }
+    if (-not $InstallAutoRecording -and -not $TestNotifications) { return }
 
     try {
         Add-Type -AssemblyName System.Windows.Forms
