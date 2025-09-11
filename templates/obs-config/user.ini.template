@@ -23,6 +23,7 @@ RecordWhenStreaming=false
 KeepRecordingWhenStreamStops=false
 SysTrayEnabled=true
 SysTrayWhenStarted=true
+SysTrayMinimizeToTray=true
 SaveProjectors=false
 ShowTransitions=true
 ShowListboxToolbars=true

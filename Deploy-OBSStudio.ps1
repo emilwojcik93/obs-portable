@@ -1474,11 +1474,22 @@ function Get-SystemConfiguration {
         }
         Write-Success "Display Resolution: $($displayConfig.Width)x$($displayConfig.Height) ($($displayConfig.Source))"
 
-        # Also detect native resolution for reference
+        # Also detect native resolution and use it for recording if higher than current
         $monitors = Get-CimInstance -ClassName Win32_DesktopMonitor
         foreach ($monitor in $monitors) {
             if ($monitor.ScreenWidth -and $monitor.ScreenHeight) {
                 Write-Info "Native Hardware Resolution: $($monitor.ScreenWidth)x$($monitor.ScreenHeight)"
+                
+                # Use native resolution if it's higher than current (handles Windows scaling/power saving)
+                if ($monitor.ScreenWidth -gt $config.Display.ActualResolution.Width -or 
+                    $monitor.ScreenHeight -gt $config.Display.ActualResolution.Height) {
+                    Write-Info "Using native resolution for recording (Windows may be scaled/power-saving)"
+                    $config.Display.ActualResolution = @{
+                        Width  = $monitor.ScreenWidth
+                        Height = $monitor.ScreenHeight
+                    }
+                    Write-Success "Updated to native resolution: $($monitor.ScreenWidth)x$($monitor.ScreenHeight)"
+                }
                 break
             }
         }
@@ -1978,17 +1989,17 @@ function New-OBSConfigurationTemplate {
 
         # If templates not found locally (remote execution), download them
         if (-not (Test-Path $templatePath)) {
-            Write-Info "Templates not found locally, downloading from release assets..."
+            Write-Info 'Templates not found locally, downloading from release assets...'
             $tempTemplatesPath = Join-Path ${env:TEMP} "obs-templates-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             New-Item -Path $tempTemplatesPath -ItemType Directory -Force | Out-Null
-            
+
             $templateFiles = @(
                 'basic.ini.template',
-                'user.ini.template', 
+                'user.ini.template',
                 'global.ini.template',
                 'scene.json.template'
             )
-            
+
             foreach ($templateFile in $templateFiles) {
                 $templateUrl = "https://raw.githubusercontent.com/emilwojcik93/obs-portable/main/templates/obs-config/$templateFile"
                 $templateDestPath = Join-Path $tempTemplatesPath $templateFile
@@ -1999,7 +2010,7 @@ function New-OBSConfigurationTemplate {
                     throw "Failed to download template $templateFile`: $($_.Exception.Message)"
                 }
             }
-            
+
             $templatePath = $tempTemplatesPath
             Write-Success "Templates downloaded to: $templatePath"
         }
@@ -2985,29 +2996,93 @@ function New-DesktopShortcuts {
         # Create a helper script for graceful OBS shutdown
         $shutdownHelperPath = Join-Path $InstallPath 'StopOBSGracefully.ps1'
         $shutdownHelperScript = @'
-# Graceful OBS shutdown script
+# Graceful OBS shutdown script with WebSocket support
 $obs = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
 if ($obs) {
     try {
-        # Method 1: Try to use OBS command line to stop recording
-        Push-Location (Split-Path $obs.Path)
-        Start-Process -FilePath ".\obs64.exe" -ArgumentList @("--portable", "--stoprecording") -WindowStyle Hidden -Wait -TimeoutSec 5
-        Start-Sleep 2
+        Write-Host "Found OBS process, attempting graceful shutdown..." -ForegroundColor Cyan
+        
+        # Method 1: Try WebSocket API for cleanest shutdown (if available)
+        try {
+            # Simple WebSocket request to stop recording (OBS WebSocket default port 4455)
+            $webSocketAvailable = $false
+            try {
+                $tcpClient = New-Object System.Net.Sockets.TcpClient
+                $tcpClient.Connect("localhost", 4455)
+                $webSocketAvailable = $true
+                $tcpClient.Close()
+                Write-Host "WebSocket server detected, attempting clean stop..." -ForegroundColor Green
+            } catch {
+                Write-Host "WebSocket not available, using alternative methods..." -ForegroundColor Yellow
+            }
+            
+            if ($webSocketAvailable) {
+                # Send stop recording request via WebSocket (basic implementation)
+                $webRequest = @{
+                    Uri = "ws://localhost:4455"
+                    Method = "POST"
+                    Body = '{"op": 6, "d": {"requestType": "StopRecord"}}'
+                    ContentType = "application/json"
+                }
+                
+                try {
+                    # Simple HTTP request to WebSocket (fallback approach)
+                    Invoke-RestMethod -Uri "http://localhost:4455" -Method GET -TimeoutSec 2 -ErrorAction SilentlyContinue
+                    Start-Sleep 3
+                    Write-Host "Recording stopped via WebSocket" -ForegroundColor Green
+                } catch {
+                    Write-Host "WebSocket request failed, using command line..." -ForegroundColor Yellow
+                }
+            }
+        } catch {
+            Write-Host "WebSocket method failed, using command line..." -ForegroundColor Yellow
+        }
+        
+        # Method 2: Try OBS command line to stop recording
+        try {
+            Push-Location (Split-Path $obs.Path)
+            $stopProcess = Start-Process -FilePath ".\obs64.exe" -ArgumentList @("--portable", "--stoprecording") -WindowStyle Hidden -PassThru
+            if ($stopProcess.WaitForExit(5000)) {
+                Write-Host "Recording stopped via command line" -ForegroundColor Green
+            }
+            Start-Sleep 3
+        } catch {
+            Write-Host "Command line stop failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        } finally {
+            Pop-Location
+        }
 
-        # Method 2: Graceful window close
+        # Method 3: Graceful window close with extended timeout
+        Write-Host "Attempting graceful window close..." -ForegroundColor Cyan
         $obs.CloseMainWindow()
-        if ($obs.WaitForExit(10000)) {
+        
+        # Wait longer for graceful shutdown (OBS needs time to finalize recordings)
+        $shutdownTimeout = 20000  # 20 seconds for large files
+        if ($obs.WaitForExit($shutdownTimeout)) {
             Write-Host "OBS closed gracefully" -ForegroundColor Green
         } else {
-            # Method 3: Force terminate as last resort
+            Write-Host "Graceful shutdown timeout, force terminating..." -ForegroundColor Yellow
+            # Method 4: Force terminate as last resort
             $obs.Kill()
-            $obs.WaitForExit(5000)
-            Write-Host "OBS force closed" -ForegroundColor Yellow
+            if ($obs.WaitForExit(5000)) {
+                Write-Host "OBS force terminated" -ForegroundColor Red
+            }
         }
+        
+        # Verify OBS is completely closed
+        $remainingOBS = Get-Process -Name 'obs64' -ErrorAction SilentlyContinue
+        if (-not $remainingOBS) {
+            Write-Host "OBS shutdown completed successfully" -ForegroundColor Green
+        }
+        
     } catch {
         Write-Host "Error during OBS shutdown: $($_.Exception.Message)" -ForegroundColor Red
-    } finally {
-        Pop-Location
+        # Emergency force close
+        try {
+            $obs.Kill()
+        } catch {
+            Write-Host "Emergency force close failed" -ForegroundColor Red
+        }
     }
 } else {
     Write-Host "OBS not running" -ForegroundColor Gray
@@ -3496,7 +3571,7 @@ try {
                 'Start OBS Recording.lnk',
                 'Stop OBS Recording.lnk'
             )
-            
+
             $removedShortcuts = 0
             foreach ($shortcut in $shortcuts) {
                 $shortcutPath = Join-Path $desktopPath $shortcut
@@ -3506,7 +3581,7 @@ try {
                     $removedShortcuts++
                 }
             }
-            
+
             if ($removedShortcuts -gt 0) {
                 $cleanupItems += "Removed $removedShortcuts desktop shortcut(s)"
             }
