@@ -40,7 +40,7 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 ### **⚡ TLDR - One Command Setup**
 ```powershell
 # Complete setup with plugins and enterprise features (run in Terminal as Admin)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
 
 # What this does:
 # ✅ Downloads and installs OBS Studio portable (latest version)
@@ -58,13 +58,13 @@ powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm ht
 ### **🔴 Encoder Overload Prevention**
 ```powershell
 # For severe encoder overload (33% scaling) with plugins - run in Terminal as Admin
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 33"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 33"
 ```
 
 ### **📋 Local Installation**
 ```powershell
 # Download script locally first, then run
-Invoke-WebRequest -Uri "https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1" -OutFile "Deploy-OBSStudio.ps1"
+Invoke-WebRequest -Uri "https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1" -OutFile "Deploy-OBSStudio.ps1"
 .\Deploy-OBSStudio.ps1 -Force -EnableNotifications
 ```
 
@@ -88,7 +88,7 @@ Invoke-WebRequest -Uri "https://github.com/emilwojcik93/obs-studio-iac/releases/
 ### **🔌 Plugin Installation**
 ```powershell
 # Complete setup with plugins (auto-elevates for admin rights)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -InstallOpenVINO -EnableNotifications -PerformanceMode 60"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -InstallOpenVINO -EnableNotifications -PerformanceMode 60"
 
 # Input Overlay only (keyboard/mouse visualization)
 .\Deploy-OBSStudio.ps1 -Force -InstallInputOverlay -PerformanceMode 75
@@ -264,7 +264,7 @@ Please run the following command from an elevated PowerShell window:
 To open elevated PowerShell:
 1. Press Win+X
 2. Select 'Windows PowerShell (Admin)' or 'Terminal (Admin)'
-3. Navigate to: C:\Users\YourName\obs_studio-portable
+3. Navigate to: C:\Users\YourName\obs-portable
 4. Run the command above
 ```
 
@@ -637,7 +637,7 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 ### **⚡ TLDR - One Command Remote Setup**
 ```powershell
 # Most common setup - no download required, ready in ~2 minutes
-&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
+&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications
 ```
 **What this does**: Downloads OBS, detects hardware, configures optimal settings (60% scaling), enables notifications
 
@@ -646,31 +646,31 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 #### **🔴 Encoder Overload Prevention**
 ```powershell
 # Ultra-lightweight (50% scaling)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications"
 
 # Extreme performance (33% scaling)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications"
 ```
 
 #### **🏢 Enterprise Deployment**
 ```powershell
 # Full enterprise setup with auto-recording (requires admin)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallScheduledTasks -EnableNotifications"
 ```
 
 #### **🧪 Testing and Validation**
 ```powershell
 # Preview settings without making changes
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -CheckOnly -PerformanceMode 50"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -CheckOnly -PerformanceMode 50"
 
 # Test notifications system
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -TestNotifications"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -TestNotifications"
 ```
 
 #### **📡 Alternative: iwr | iex Method**
 ```powershell
 # Shorter syntax (runs with default parameters only)
-iwr https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1 | iex
+iwr https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1 | iex
 ```
 
 **Note**: ScriptBlock method is preferred as it allows parameter passing, while `iwr | iex` uses default settings only.
@@ -780,16 +780,16 @@ After installing with `-InstallOpenVINO`, follow these steps:
 
 ```powershell
 # Full enterprise setup with all plugins (recommended)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -VerboseLogging -Force -EnableNotifications -InstallScheduledTasks -PrimaryDisplay -InstallInputOverlay -InstallOpenVINO -PerformanceMode 50"
 
 # Gaming/streaming setup with input overlay
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -EnableNotifications -PerformanceMode 75"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallInputOverlay -EnableNotifications -PerformanceMode 75"
 
 # AI webcam effects for professional content
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallOpenVINO -EnableNotifications -PerformanceMode 90"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -InstallOpenVINO -EnableNotifications -PerformanceMode 90"
 
 # Minimal setup (basic OBS only)
-powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications"
+powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications"
 ```
 
 ## 🏗️ Repository Structure

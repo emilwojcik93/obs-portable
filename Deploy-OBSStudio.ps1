@@ -76,7 +76,7 @@ Complete IaC solution for OBS Studio portable deployment with:
     Author: OBS IaC Team
     Version: 2.0 - Unified Performance System
     Requires: PowerShell 5.0+, Windows 10/11
-    GitHub: https://github.com/[username]/obs_studio-portable
+    GitHub: https://github.com/emilwojcik93/obs-portable
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -214,7 +214,7 @@ Remove-Item '$wrapperScript' -Force -ErrorAction SilentlyContinue
             @"
 try {
     Set-Location '$PWD'
-    &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
+    &([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-portable/releases/latest/download/Deploy-OBSStudio.ps1))) $($argList -join ' ')
     `$exitCode = `$LASTEXITCODE
 } catch {
     Write-Error `$_.Exception.Message
