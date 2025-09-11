@@ -16,10 +16,11 @@ This repository provides a comprehensive Infrastructure as Code solution for OBS
 
 ### 🔧 **Hardware Optimization**
 - ✅ **GPU Detection Priority**: NVENC (NVIDIA) → QuickSync (Intel) → AMF (AMD) → x264 (Software)
-- ✅ **Resolution Intelligence**: WMI-based accurate display detection (fixes common 1280x800 vs 1920x1200 issues)
-- ✅ **Multi-Display Support**: Internal screen preference for laptops
+- ✅ **Advanced Display Detection**: WMI-based accurate display detection with manufacturer identification
+- ✅ **Multi-Display Intelligence**: Smart internal/external display selection with TMX laptop screen detection
+- ✅ **Auto-Fit Display Capture**: Automatic positioning and scaling of display sources
 - ✅ **Performance Tuning**: Hardware-specific bitrate and quality settings
-- ✅ **Encoder Overflow Protection**: `-OptimizedCompression` for lower-end hardware
+- ✅ **Encoder Validation**: Flexible validation supporting both Simple (amd) and Advanced (amd_amf_h264) encoder formats
 
 ### 🛡️ **Video Corruption Prevention**
 - ✅ **20-Second Graceful Shutdown**: Handles large/high-quality video files properly
@@ -177,16 +178,34 @@ After installation, the script automatically launches OBS Studio. **This is requ
 
 This interactive approach ensures OBS creates proper configuration files, then the script optimizes them for your hardware and SharePoint/OneDrive use. **This step is mandatory** - OBS must be launched interactively at least once to complete its internal setup.
 
-## 🖥️ Display Selection
+## 🖥️ Advanced Display Selection
+
+### **Intelligent Display Detection**
+The script features advanced display detection with multiple methods for accurate monitor identification:
+
+- ✅ **Hardware Manufacturer Detection**: Real monitor names (Philips PHL 499P9, Samsung, Dell, etc.)
+- ✅ **Internal Display Intelligence**: TMX, LGD, AUO, BOE manufacturer codes for laptop screens
+- ✅ **External Monitor Priority**: PHL, DEL, SAM, AOC manufacturer codes for external displays
+- ✅ **Resolution Matching**: WMI video controller correlation with display resolution
+- ✅ **Auto-Fit Display Capture**: Automatic positioning and scaling in OBS scenes
+
+### **Display Parameter Options**
+
+| Parameter | Description | Use Case |
+|-----------|-------------|----------|
+| `-PrimaryDisplay` | Use Windows primary display | Single display or when primary is preferred |
+| `-InternalDisplay` | Force internal laptop display | Dual-monitor laptops, prefer laptop screen |
+| `-ExternalDisplay` | Force external monitor | Dual-monitor setup, prefer external monitor |
+| `-CustomDisplay "1920x1080"` | Specify exact resolution | Custom resolution requirements |
 
 ### **Automatic Single Display Selection**
-When only one display is detected, the script automatically uses it without prompting and shows detailed monitor information:
+When only one display is detected, the script automatically uses it without prompting:
 
 ```
 === System Configuration Analysis ===
-Single display detected: PHL 499P9 (1920x1080) - Philips
-Display Resolution: 1920x1080 (Single Display - PHL 499P9)
-Native Hardware Resolution: 5120x1440
+Single display detected: TL070FVXS01-0 (1280x720) - TMX
+Display Resolution: 1280x720 (Single Display - TL070FVXS01-0)
+Selected internal display: TL070FVXS01-0 (1280x720)
 ```
 
 ### **Interactive Multi-Display Selection**
@@ -229,7 +248,7 @@ Select display for recording (1-2):
 
 # Error handling - invalid resolution
 .\Deploy-OBSStudio.ps1 -CustomDisplay "1600x900" -Force
-# Error: Custom resolution 1600x900 does not match any detected display resolution. 
+# Error: Custom resolution 1600x900 does not match any detected display resolution.
 # Available resolutions: 1920x1080, 5120x1440
 ```
 
@@ -391,7 +410,7 @@ When enabled with `-EnableNotifications`, you'll receive non-interactive balloon
 # Use internal display for laptops with dual monitors
 .\Deploy-OBSStudio.ps1 -InternalDisplay -Force
 
-# Use external display for laptops with dual monitors  
+# Use external display for laptops with dual monitors
 .\Deploy-OBSStudio.ps1 -ExternalDisplay -Force
 
 # Force specific resolution (must match detected display)
@@ -519,7 +538,7 @@ The script uses a single `-PerformanceMode` parameter with intuitive scaling per
 - **OneDrive Detection**: Corporate OneDrive paths may vary by organization
 
 ### **Common Issues:**
-1. **OBS Won't Start from Scheduled Task**: 
+1. **OBS Won't Start from Scheduled Task**:
    - **Cause**: Incorrect working directory
    - **Solution**: Script now uses `Push-Location` to `bin\64bit` directory
 
@@ -579,7 +598,7 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 
 **🟢 NVIDIA NVENC (Ultra-Lightweight):**
 - **P1 Preset**: Fastest encoding preset
-- **Ultra-Low Latency**: Minimizes encoding delay  
+- **Ultra-Low Latency**: Minimizes encoding delay
 - **Multipass**: Disabled for maximum performance
 
 **🔵 Intel QuickSync (Ultra-Lightweight):**
@@ -629,7 +648,7 @@ Based on the [AMF Options documentation](https://raw.githubusercontent.com/Matis
 # Ultra-lightweight (50% scaling)
 powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 50 -EnableNotifications"
 
-# Extreme performance (33% scaling)  
+# Extreme performance (33% scaling)
 powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -PerformanceMode 33 -EnableNotifications"
 ```
 
@@ -655,6 +674,29 @@ iwr https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Depl
 ```
 
 **Note**: ScriptBlock method is preferred as it allows parameter passing, while `iwr | iex` uses default settings only.
+
+## 🛠️ Testing and Validation Tools
+
+### **Display Configuration Testing**
+Use the generic display testing tool to validate all display configurations:
+
+```powershell
+# Test all display modes with OBS validation
+.\tools\Test-DisplayConfigurations.ps1
+
+# Test with custom OBS installation path
+.\tools\Test-DisplayConfigurations.ps1 -InstallPath "C:\Custom\OBS-Path"
+
+# Test without launching OBS (for CI/automated testing)
+.\tools\Test-DisplayConfigurations.ps1 -SkipOBSLaunch
+```
+
+The tool automatically:
+- ✅ **Detects available displays** and generates appropriate test cases
+- ✅ **Tests all display parameters** (-PrimaryDisplay, -InternalDisplay, -ExternalDisplay)
+- ✅ **Verifies scene configuration** and Display Capture source setup
+- ✅ **Launches OBS for manual validation** (unless skipped)
+- ✅ **Provides comprehensive reporting** of configuration results
 
 ## 🔌 Plugin Setup Instructions
 
@@ -750,12 +792,36 @@ powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm ht
 powershell.exe -ExecutionPolicy Bypass -Command "&([ScriptBlock]::Create((irm https://github.com/emilwojcik93/obs-studio-iac/releases/latest/download/Deploy-OBSStudio.ps1))) -Force -EnableNotifications"
 ```
 
+## 🏗️ Repository Structure
+
+```
+obs-portable/
+├── Deploy-OBSStudio.ps1           # Main deployment script
+├── README.md                      # Comprehensive documentation
+├── templates/                     # Configuration templates
+│   ├── obs-config/               # OBS configuration templates
+│   │   ├── basic.ini.template    # OBS basic settings template
+│   │   ├── global.ini.template   # OBS global settings template
+│   │   ├── scene.json.template   # Scene configuration with Display Capture
+│   │   └── user.ini.template     # User settings template
+│   ├── input-overlay/            # Input Overlay plugin templates
+│   │   └── custom-input-history.html # Professional input history template
+│   └── README.md                 # Template documentation
+├── tools/                        # Utility and testing tools
+│   └── Test-DisplayConfigurations.ps1 # Generic display testing tool
+└── .github/                      # CI/CD and automation
+    ├── workflows/                # GitHub Actions workflows
+    ├── scripts/                  # CI testing scripts
+    └── tests/                    # Automated test suites
+```
+
 ## 🔧 Files Overview
 
-| File | Purpose | Description |
-|------|---------|-------------|
+| File/Directory | Purpose | Description |
+|----------------|---------|-------------|
 | `Deploy-OBSStudio.ps1` | Main IaC Script | Complete deployment automation with 5-tier performance system |
+| `templates/obs-config/` | OBS Templates | Pre-configured templates for silent deployment |
+| `templates/input-overlay/` | Plugin Templates | Professional input history and overlay templates |
+| `tools/` | Utility Scripts | Testing and validation tools for display configurations |
 | `README.md` | Documentation | Comprehensive usage, performance guides, and remote execution |
-| `.cursorrules` | AI Assistant | Modern Cursor AI rules for development assistance |
-| `.gitignore` | Git Configuration | Excludes generated files, installations, and history |
-| `.github/workflows/` | CI/CD | Automated release workflow for GitHub assets |
+| `.github/workflows/` | CI/CD | Automated testing and release workflows |

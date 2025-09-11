@@ -35,6 +35,7 @@ GPOShutdown.ps1
 Test-*.ps1
 !Test-Notifications.ps1
 !.github/scripts/test-*.ps1
+!tools/Test-*.ps1
 
 # System files
 $RECYCLE.BIN/

@@ -1,0 +1,24 @@
+[General]
+MaxLogs=10
+InfoIncrement=-1
+ProcessPriority=Normal
+EnableAutoUpdates=true
+BrowserHWAccel=true
+LastUpdateCheck=0
+InstallGUID={{INSTALL_GUID}}
+LastVersion=520159234
+
+[Video]
+Renderer=Direct3D 11
+
+[Audio]
+DisableAudioDucking=true
+
+[Locations]
+Configuration=../../config
+SceneCollections=../../config
+Profiles=../../config
+
+[PropertiesWindow]
+cx=720
+cy=580

@@ -2,51 +2,60 @@ name: Continuous Integration Test
 
 on:
   push:
-    branches: [ main ]
-    paths: 
-      - 'Deploy-OBSStudio.ps1'
-      - '.github/workflows/ci-test.yml'
-      - '.github/scripts/*.ps1'
-  pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'Deploy-OBSStudio.ps1'
-      - '.github/workflows/ci-test.yml'
-      - '.github/scripts/*.ps1'
+      - "Deploy-OBSStudio.ps1"
+      - "templates/**"
+      - "tools/**"
+      - ".github/workflows/ci-test.yml"
+      - ".github/scripts/*.ps1"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Deploy-OBSStudio.ps1"
+      - "templates/**"
+      - "tools/**"
+      - ".github/workflows/ci-test.yml"
+      - ".github/scripts/*.ps1"
   workflow_dispatch:
     # Allow manual triggering for testing
 
 jobs:
   test:
     runs-on: windows-2025
-    
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Test Script Syntax
-      shell: pwsh
-      run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-script-syntax.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
+      - name: Test Script Syntax
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-script-syntax.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: Test CheckOnly Mode
-      shell: pwsh
-      run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
+      - name: Test CheckOnly Mode
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-checkonly-mode.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1" -PerformanceMode 60
 
-    - name: Test Performance Mode Parameters
-      shell: pwsh
-      run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
+      - name: Test Performance Mode Parameters
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-performance-modes.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: Test Help Documentation
-      shell: pwsh
-      run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-help-documentation.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
+      - name: Test Help Documentation
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .github/scripts/test-help-documentation.ps1 -ScriptPath ".\Deploy-OBSStudio.ps1"
 
-    - name: CI Test Summary
-      shell: pwsh
-      run: |
-        Write-Host "=== CI Test Summary ===" -ForegroundColor Green
-        Write-Host "+ Script syntax validation passed" -ForegroundColor Green
-        Write-Host "+ CheckOnly mode functionality verified" -ForegroundColor Green
-        Write-Host "+ All performance modes tested successfully" -ForegroundColor Green
-        Write-Host "+ Help documentation accessible" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "Deploy-OBSStudio.ps1 is ready for deployment!" -ForegroundColor Green
+      - name: Test Display Configuration Tool
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\tools\Test-DisplayConfigurations.ps1 -SkipOBSLaunch -ScriptPath ".\Deploy-OBSStudio.ps1"
+
+      - name: CI Test Summary
+        shell: pwsh
+        run: |
+          Write-Host "=== CI Test Summary ===" -ForegroundColor Green
+          Write-Host "+ Script syntax validation passed" -ForegroundColor Green
+          Write-Host "+ CheckOnly mode functionality verified" -ForegroundColor Green
+          Write-Host "+ All performance modes tested successfully" -ForegroundColor Green
+          Write-Host "+ Help documentation accessible" -ForegroundColor Green
+          Write-Host "+ Display configuration tool verified" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "Deploy-OBSStudio.ps1 is ready for deployment!" -ForegroundColor Green
